@@ -5,7 +5,7 @@
 # blog:https://surfncircuits.com/2020/11/27/implementing-a-single-edge-nibble-transmission-sent-protocol-in-python-for-the-raspberry-pi-zero/
 
 import time
-import pigpio
+import gpiod
 import threading
 
 class SENTReader:
