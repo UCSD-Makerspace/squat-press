@@ -1,3 +1,9 @@
+import sys
+import os
+
+sent_path = os.path.abspath('../../pigpio-master/EXAMPLES/Python/SENT_PROTOCOL')
+sys.path.append(sent_path)
+
 #!/usr/bin/env python3
 
 # read_PWM.py
