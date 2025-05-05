@@ -1,8 +1,7 @@
 import sys
-import os
+sys.path.append("/home/mice/mice-squat/pigpio-master/EXAMPLES/Python/SENT_PROTOCOL")
 
-sent_path = os.path.abspath('../../pigpio-master/EXAMPLES/Python/SENT_PROTOCOL')
-sys.path.append(sent_path)
+import read_SENT
 
 #!/usr/bin/env python3
 
@@ -304,7 +303,7 @@ if __name__ == "__main__":
 
     import time
     import pigpio
-    import read_SENT
+    # import read_SENT
 
     SENT_GPIO = 24
     RUN_TIME = 6000000000.0
