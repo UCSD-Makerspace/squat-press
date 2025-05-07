@@ -9,3 +9,6 @@ def main():
         dir = -dir
         motor.rotateDegrees(dir*90, 0.001)
         sleep(1)
+
+if __name__ == "__main__":
+    main()
