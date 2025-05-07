@@ -305,7 +305,7 @@ if __name__ == "__main__":
     import pigpio
     # import read_SENT
 
-    SENT_GPIO = 24
+    SENT_GPIO = 18
     RUN_TIME = 6000000000.0
     SAMPLE_TIME = 0.1
 
