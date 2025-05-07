@@ -61,7 +61,8 @@ class StepperMotor:
         self.en_pin = en_pin
         self.ms_mode = ms_mode
         self._enabled = False
-        self.spr = spr
+        self.spr = spr                  # Steps per revolution
+        self.mspr = ms_mode.value * spr # Microsteps per revolution
         self._position = start_position
         self._direction = Direction.CLOCKWISE
 
@@ -104,13 +105,14 @@ class StepperMotor:
         if self.en_pin != 0:
             self.pi.write(self.en_pin, 1)
 
-    def set_microstepping(self, ms1: int, ms2: int):
+    def _set_microstepping(self, ms1: int, ms2: int):
         self.pi.write(self.ms1_pin, ms1)
         self.pi.write(self.ms2_pin, ms2)
 
     def set_microstepping_mode(self, mode: MicrosteppingMode):
         ms1, ms2 = mode.pin_values
-        self.set_microstepping(ms1, ms2)
+        self.mspr = mode.value * self.spr
+        self._set_microstepping(ms1, ms2)
 
     def step(self, steps: int, delay:float =0.001):
         if self._enabled:
@@ -129,7 +131,7 @@ class StepperMotor:
             sleep(delay)
 
             # Keep track of the position
-            self._position += (1 / self.ms_mode.value) * (self._direction.sign)
+            self._position += (1 / self.mspr) * (self._direction.sign)
 
         self._disable()
 
@@ -165,7 +167,7 @@ class StepperMotor:
         if degrees == 0: 
             return
         self.set_direction(Direction.CLOCKWISE if degrees < 0 else Direction.COUNTERCLOCKWISE)
-        self.step(int(abs(degrees) * self.spr * self.ms_mode.value / 360), delay)
+        self.step(int(abs(degrees) * self.mspr / 360), delay)
 
     def rotate_degrees_threaded(self, degrees: int, delay:float =0.001) -> Tuple[Thread, Thread]:
         """Rotate the motor a certain number of degrees in a separate thread.
@@ -176,7 +178,7 @@ class StepperMotor:
         if degrees == 0: 
             return
         self.set_direction(Direction.CLOCKWISE if degrees < 0 else Direction.COUNTERCLOCKWISE)
-        return self.step_threaded(int(abs(degrees) * self.spr * self.ms_mode.value / 360), delay)
+        return self.step_threaded(int(abs(degrees) * self.mspr / 360), delay)
 
     def __del__(self):
         self.cleanup()
