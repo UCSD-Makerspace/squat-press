@@ -1,3 +1,8 @@
+import sys
+sys.path.append("/home/mice/mice-squat/pigpio-master/EXAMPLES/Python/SENT_PROTOCOL")
+
+import read_SENT
+
 #!/usr/bin/env python3
 
 # read_PWM.py
@@ -298,7 +303,7 @@ if __name__ == "__main__":
 
     import time
     import pigpio
-    import read_SENT
+    # import read_SENT
 
     SENT_GPIO = 24
     RUN_TIME = 6000000000.0
