@@ -21,11 +21,12 @@ def main():
     dir = 1
     while True:
         dir = -dir
-        thread, _ = motor.rotate_degrees_threaded(dir*180, 0.001)
-        print(f"Rotating {dir*90} degrees...")
+        dist = dir*180
+        thread, _ = motor.rotate_degrees_threaded(dist, 0)
+        print(f"Rotating {dist} degrees...")
         thread.join()
         print("Rotation complete.")
-        print(f"Current position: {motor.position} revolutions")
+        print(f"Current position: {motor.position:.2f} revolutions")
         sleep(1)
 
 if __name__ == "__main__":
