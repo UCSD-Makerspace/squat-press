@@ -152,7 +152,7 @@ class StepperMotor:
             thread.join()
             self._disable()
 
-        waiting_thread = Thread(wait_for_end)
+        waiting_thread = Thread(target=wait_for_end)
         waiting_thread.start()
         return (thread, waiting_thread)
 
