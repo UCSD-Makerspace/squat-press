@@ -15,20 +15,18 @@ SPR = 200 # 200 spr = 1.8 degrees per step
 
 
 class MicrosteppingMode(Enum):
-    FULL = 1
-    HALF = 2
-    QUARTER = 4
     EIGHTH = 8
     SIXTEENTH = 16
+    THIRTYSECOND = 32
+    SIXTYFOURTH = 64
 
     @property
     def pin_values(self) -> Tuple[int, int]:
         _pin_values = {
-            MicrosteppingMode.FULL: (0, 0),
-            MicrosteppingMode.HALF: (1, 0),
-            MicrosteppingMode.QUARTER: (0, 1),
-            MicrosteppingMode.EIGHTH: (1, 1),
-            MicrosteppingMode.SIXTEENTH: (1, 1),
+            MicrosteppingMode.EIGHTH:       (0, 0),
+            MicrosteppingMode.SIXTEENTH:    (1, 1),
+            MicrosteppingMode.THIRTYSECOND: (1, 0),
+            MicrosteppingMode.SIXTYFOURTH:  (0, 1),
         }
         return _pin_values[self]
 
