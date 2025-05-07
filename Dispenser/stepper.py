@@ -184,4 +184,9 @@ class StepperMotor:
     def cleanup(self):
         logging.info("Shutting down motor.")
         self._disable()
-        self.pi.stop()
+        try:
+            self.pi.stop()
+        except Exception as e:
+            logging.error(f"Error stopping pigpio: {e}")
+        else:
+            logging.info("Pigpio stopped successfully.")
