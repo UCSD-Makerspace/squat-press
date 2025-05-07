@@ -28,7 +28,7 @@ class MicrosteppingMode(Enum):
     }
 
     def pin_values(self) -> Tuple[int, int]:
-        return self._pin_values[self]
+        return MicrosteppingMode._pin_values[self]
 
 
 class StepperMotor:
