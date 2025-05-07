@@ -82,7 +82,7 @@ class StepperMotor:
             self.set_direction(1) # CW
         else:
             self.set_direction(0) # CCW
-        self.step(int(degrees * CPR * self.ms_mode.value / 360), delay)
+        self.step(int(abs(degrees) * CPR * self.ms_mode.value / 360), delay)
 
     def __del__(self):
         self.cleanup()
