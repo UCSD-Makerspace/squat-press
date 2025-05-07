@@ -19,16 +19,16 @@ class MicrosteppingMode(Enum):
     EIGHTH = 8
     SIXTEENTH = 16
 
-    _pin_values = {
-        FULL: (0, 0),
-        HALF: (1, 0),
-        QUARTER: (0, 1),
-        EIGHTH: (1, 1),
-        SIXTEENTH: (1, 1),
-    }
-
+    @property
     def pin_values(self) -> Tuple[int, int]:
-        return MicrosteppingMode._pin_values[self.value]
+        _pin_values = {
+            MicrosteppingMode.FULL: (0, 0),
+            MicrosteppingMode.HALF: (1, 0),
+            MicrosteppingMode.QUARTER: (0, 1),
+            MicrosteppingMode.EIGHTH: (1, 1),
+            MicrosteppingMode.SIXTEENTH: (1, 1),
+        }
+        return _pin_values[self]
 
 
 class StepperMotor:
@@ -62,7 +62,7 @@ class StepperMotor:
         self.pi.write(self.ms2_pin, ms2)
 
     def set_microstepping_mode(self, mode: MicrosteppingMode):
-        ms1, ms2 = mode.pin_values()
+        ms1, ms2 = mode.pin_values
         self.set_microstepping(ms1, ms2)
 
     def step(self, steps: int, delay:float =0.001):
