@@ -1,5 +1,7 @@
 import pigpio
 from time import sleep
+from enum import Enum
+from typing import Tuple
 
 # Default Pin Definitions
 DIR_PIN = 23
@@ -9,12 +11,25 @@ MS2_PIN = 27
 EN_PIN = 17
 CPR = 200
 
-class MicrosteppingMode(tuple):
-    FULL = (0, 0)
-    HALF = (1, 0)
-    QUARTER = (0, 1)
-    EIGHTH = (1, 1)
-    SIXTEENTH = (1, 1)
+
+class MicrosteppingMode(Enum):
+    FULL = 1
+    HALF = 2
+    QUARTER = 4
+    EIGHTH = 8
+    SIXTEENTH = 16
+
+    _pin_values = {
+        FULL: (0, 0),
+        HALF: (1, 0),
+        QUARTER: (0, 1),
+        EIGHTH: (1, 1),
+        SIXTEENTH: (1, 1),
+    }
+
+    def pin_values(self) -> Tuple[int, int]:
+        return self._pin_values[self]
+
 
 class StepperMotor:
     def __init__(
@@ -47,7 +62,7 @@ class StepperMotor:
         self.pi.write(self.ms2_pin, ms2)
 
     def set_microstepping_mode(self, mode: MicrosteppingMode):
-        ms1, ms2 = mode
+        ms1, ms2 = mode.pin_values()
         self.set_microstepping(ms1, ms2)
 
     def step(self, steps: int, delay:float =0.001):
