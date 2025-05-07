@@ -311,7 +311,7 @@ if __name__ == "__main__":
 
     pi = pigpio.pi()
 
-    p = read_SENT.SENTReader(pi, SENT_GPIO)
+    p = SENTReader(pi, SENT_GPIO)
 
     start = time.time()
 
