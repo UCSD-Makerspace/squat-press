@@ -1,4 +1,5 @@
 import pigpio
+import time
 
 pi = pigpio.pi()
 
@@ -11,4 +12,4 @@ def read_spi():
 
 while True:
     print(f"Data: {read_spi()}")
-    pi.sleep(0.1)  # Sleep for 100ms to avoid flooding the SPI bus
+    time.sleep(0.1)  # Sleep for 100ms to avoid flooding the SPI bus
