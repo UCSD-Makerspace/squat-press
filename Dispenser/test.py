@@ -17,11 +17,11 @@ def test2():
 
 def main():
     motor = stepper.StepperMotor()
-    motor.set_microstepping_mode(stepper.MicrosteppingMode.EIGHTH)
+    motor.set_microstepping_mode(stepper.MicrosteppingMode.SIXTYFOURTH)
     dir = 1
     while True:
         dir = -dir
-        thread, _ = motor.rotate_degrees_threaded(dir*90, 0.001)
+        thread, _ = motor.rotate_degrees_threaded(dir*180, 0.001)
         print(f"Rotating {dir*90} degrees...")
         thread.join()
         print("Rotation complete.")
