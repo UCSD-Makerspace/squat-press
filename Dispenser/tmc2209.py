@@ -38,7 +38,7 @@ class Direction(Enum):
     def sign(self) -> int:
         return 1 if self == Direction.COUNTERCLOCKWISE else -1
 
-class StepperMotor:
+class TMC2209:
     def __init__(
         self,
         ms_mode: MicrosteppingMode = MicrosteppingMode.EIGHTH,

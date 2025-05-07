@@ -1,4 +1,4 @@
-import stepper
+import tmc2209
 from time import sleep
 import pigpio
 
@@ -16,8 +16,8 @@ def test2():
 
 
 def main():
-    motor = stepper.StepperMotor()
-    motor.set_microstepping_mode(stepper.MicrosteppingMode.SIXTYFOURTH)
+    motor = tmc2209.TMC2209()
+    motor.set_microstepping_mode(tmc2209.MicrosteppingMode.SIXTYFOURTH)
     dir = 1
     while True:
         dir = -dir
