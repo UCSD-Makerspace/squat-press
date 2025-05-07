@@ -28,7 +28,7 @@ class MicrosteppingMode(Enum):
     }
 
     def pin_values(self) -> Tuple[int, int]:
-        return MicrosteppingMode._pin_values[self]
+        return MicrosteppingMode._pin_values[self.value]
 
 
 class StepperMotor:
@@ -82,7 +82,7 @@ class StepperMotor:
             self.set_direction(1) # CW
         else:
             self.set_direction(0) # CCW
-        self.step(degrees * CPR * self.ms_mode / 360, delay)
+        self.step(degrees * CPR * self.ms_mode.value / 360, delay)
 
     def __del__(self):
         self.cleanup()
