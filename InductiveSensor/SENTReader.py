@@ -13,7 +13,7 @@ class Fault(Enum):
     CRC_ERROR = 4
 
 class FaultStatus(int):
-    def __init__(self):
+    def __init__(self, value: int=0):
         super().__init__()
     
     def setFault(self, fault: Fault):
