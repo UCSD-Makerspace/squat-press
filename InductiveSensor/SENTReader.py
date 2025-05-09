@@ -271,9 +271,9 @@ class SENTReader:
         # Should be 24 bits long
         # InputBitString = bin(int((datanibble + datanibble2[2:]), 16))[2:]
         # print(InputBitString)
-        print(f"{datanibble}, {datanibble2}")
+        # print(f"{datanibble}, {datanibble2}")
         InputBitString = f"{int(datanibble[2:], 16):012b}{int(datanibble2[2:], 16):012b}"
-        print(InputBitString)
+        # print(InputBitString)
 
         # format is set to remove the leading 0b,  4 characters long
         crcBitValue = format(int(str(SENTCrc), 16), "04b")
@@ -347,7 +347,7 @@ class SENTReader:
                     int(PolyBitString[i] != InputPaddedArray[cur_shift + i])
                 )
 
-        print(f"{str(InputPaddedArray[LenInput:])}, {crcValue}")
+        # print(f"{str(InputPaddedArray[LenInput:])}, {crcValue}")
         if InputPaddedArray[LenInput:] == list(crcValue):
             checkOK = True
 
