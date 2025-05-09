@@ -22,9 +22,9 @@ class FaultStatus(int):
         :param fault: The fault to set.
         """
         if fault == Fault.NONE:
-            self = 0
+            return FaultStatus(0)
         else:
-            self |= (1 << (fault.value-1))
+            return FaultStatus(self | (1 << (fault.value-1)))
 
     def getFault(self, fault: Fault) -> bool:
         """
@@ -237,7 +237,7 @@ class SENTReader:
 
         # the greatest SYNC sync is 90us.   So trip a fault if this occurs
         if SENTTick > 90:
-            errStatus.setFault(Fault.SYNC_TOO_LONG)
+            errStatus = errStatus.setFault(Fault.SYNC_TOO_LONG)
 
         # print(SentFrame)
         # convert SentFrame to HEX Format including the status and Crc bits
@@ -260,10 +260,10 @@ class SENTReader:
         #        fault = True
         # if datanibble or datanibble2  == 0 then fault = true
         if (int(datanibble, 16) == 0) or (int(datanibble2, 16) == 0):
-            errStatus.setFault(Fault.NIBBLE_ZERO)
+            errStatus = errStatus.setFault(Fault.NIBBLE_ZERO)
         # if datanibble  or datanibble2 > FFF (4096) then fault = True
         if (int(datanibble, 16) > 0xFFF) or (int(datanibble2, 16) > 0xFFF):
-            errStatus.setFault(Fault.NIBBLE_TOO_LARGE)
+            errStatus = errStatus.setFault(Fault.NIBBLE_TOO_LARGE)
         # print(datanibble)
         # CRC checking
         # converting the datanibble values to a binary bit string.
@@ -276,7 +276,7 @@ class SENTReader:
         # polybitstring is 1*X^4+1*X^3+1*x^2+0*X+1 = '11101'
         if self.crcCheck(InputBitString, "11101", crcBitValue) == False:
             print("Fault: CRC Error")
-            errStatus.setFault(Fault.CRC_ERROR)
+            errStatus = errStatus.setFault(Fault.CRC_ERROR)
 
         # converter to decimnal
         returnData = int(datanibble, 16)
