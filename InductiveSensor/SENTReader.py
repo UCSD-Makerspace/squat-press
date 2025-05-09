@@ -13,6 +13,9 @@ class Fault(Enum):
     CRC_ERROR = 4
 
 class FaultStatus(int):
+    def __init__(self):
+        super().__init__()
+    
     def setFault(self, fault: Fault):
         """
         Set the status to include a specific fault.
@@ -228,13 +231,13 @@ class SENTReader:
         # returns status, data1, data2, crc, fault
         # self._cb = self.pi.callback(self.gpio, pigpio.EITHER_EDGE, self._cbf)
         # time.sleep(0.1)
-        status = FaultStatus(0)
+        errStatus = FaultStatus(0)
         SentFrame = self.frame[:]
         SENTTick = round(SentFrame[1] / 56.0, 2)
 
         # the greatest SYNC sync is 90us.   So trip a fault if this occurs
         if SENTTick > 90:
-            status.setFault(Fault.SYNC_TOO_LONG)
+            errStatus.setFault(Fault.SYNC_TOO_LONG)
 
         # print(SentFrame)
         # convert SentFrame to HEX Format including the status and Crc bits
@@ -257,10 +260,10 @@ class SENTReader:
         #        fault = True
         # if datanibble or datanibble2  == 0 then fault = true
         if (int(datanibble, 16) == 0) or (int(datanibble2, 16) == 0):
-            status.setFault(Fault.NIBBLE_ZERO)
+            errStatus.setFault(Fault.NIBBLE_ZERO)
         # if datanibble  or datanibble2 > FFF (4096) then fault = True
         if (int(datanibble, 16) > 0xFFF) or (int(datanibble2, 16) > 0xFFF):
-            status.setFault(Fault.NIBBLE_TOO_LARGE)
+            errStatus.setFault(Fault.NIBBLE_TOO_LARGE)
         # print(datanibble)
         # CRC checking
         # converting the datanibble values to a binary bit string.
@@ -272,7 +275,8 @@ class SENTReader:
         # checking the crcValue
         # polybitstring is 1*X^4+1*X^3+1*x^2+0*X+1 = '11101'
         if self.crcCheck(InputBitString, "11101", crcBitValue) == False:
-            status.setFault(Fault.CRC_ERROR)
+            print("Fault: CRC Error")
+            errStatus.setFault(Fault.CRC_ERROR)
 
         # converter to decimnal
         returnData = int(datanibble, 16)
@@ -284,7 +288,7 @@ class SENTReader:
             returnData2,
             SENTTick,
             SENTCrc,
-            status,
+            errStatus,
             SENTPeriod,
         )
 
