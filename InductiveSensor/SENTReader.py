@@ -336,7 +336,7 @@ class SENTReader:
         # PolyBitString = PolyBitString.lstrip("0")       # Remove leading zeros from polynomial
         LenInput = len(InputBitString)
         InputPaddedArray = list(InputBitString + seed)  # Pad with seed value
-        while "1" in InputPaddedArray[:LenInput]:
+        while "1" in InputPaddedArray[:-(len(PolyBitString)+1)]:
             cur_shift = InputPaddedArray.index("1")
             for i in range(len(PolyBitString)):
                 # XOR each bit of the polynomial with the input
