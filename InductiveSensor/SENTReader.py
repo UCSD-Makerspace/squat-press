@@ -1,7 +1,7 @@
 import time
 import gpiod
 import threading
-from pigpio import pigpio
+import pigpio
 
 class SENTReader:
     """
