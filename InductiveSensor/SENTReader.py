@@ -271,6 +271,7 @@ class SENTReader:
         # Should be 24 bits long
         # InputBitString = bin(int((datanibble + datanibble2[2:]), 16))[2:]
         # print(InputBitString)
+        print(f"{datanibble}, {datanibble2}")
         InputBitString = f"{int(datanibble[2:], 16):012b}{int(datanibble2[2:], 16):012b}"
         print(InputBitString)
 
@@ -335,7 +336,7 @@ class SENTReader:
     def crcCheck(self, InputBitString, PolyBitString, seed, crcValue):
         checkOK = False
 
-        # PolyBitString = PolyBitString.lstrip("0")       # Remove leading zeros from polynomial
+        PolyBitString = PolyBitString.lstrip("0")       # Remove leading zeros from polynomial
         LenInput = len(InputBitString)
         InputPaddedArray = list(InputBitString + seed)  # Pad with seed value
         while "1" in InputPaddedArray[:LenInput]:
