@@ -12,7 +12,7 @@ class Fault(Enum):
     NIBBLE_ZERO = 3
     CRC_ERROR = 4
 
-class Status(int):
+class FaultStatus(int):
     def setFault(self, fault: Fault):
         """
         Set the status to include a specific fault.
@@ -222,13 +222,13 @@ class SENTReader:
                 t = "0x0"
         return t
 
-    def SENTData(self) -> Tuple[int, int, float, int, int, Fault, float]:
+    def SENTData(self) -> Tuple[int, int, float, int, int, FaultStatus, float]:
         # check that data1 = Data2 if they are not equal return fault = True
         # will check the CRC code for faults.  if fault, return = true
         # returns status, data1, data2, crc, fault
         # self._cb = self.pi.callback(self.gpio, pigpio.EITHER_EDGE, self._cbf)
         # time.sleep(0.1)
-        status = 0
+        status = FaultStatus(0)
         SentFrame = self.frame[:]
         SENTTick = round(SentFrame[1] / 56.0, 2)
 
