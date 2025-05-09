@@ -197,6 +197,7 @@ class SENTReader:
 
         # the greatest SYNC sync is 90us.   So trip a fault if this occurs
         if SENTTick > 90:
+            print("Fault - Sync Pulse > 90us")
             fault = True
 
         # print(SentFrame)
@@ -220,9 +221,11 @@ class SENTReader:
         #        fault = True
         # if datanibble or datanibble2  == 0 then fault = true
         if (int(datanibble, 16) == 0) or (int(datanibble2, 16) == 0):
+            print("Fault nibble = 0")
             fault = True
         # if datanibble  or datanibble2 > FFF (4096) then fault = True
         if (int(datanibble, 16) > 0xFFF) or (int(datanibble2, 16) > 0xFFF):
+            print("Fault nibble too large")
             fault = True
         # print(datanibble)
         # CRC checking
@@ -235,6 +238,7 @@ class SENTReader:
         # checking the crcValue
         # polybitstring is 1*X^4+1*X^3+1*x^2+0*X+1 = '11101'
         if self.crcCheck(InputBitString, "11101", crcBitValue) == False:
+            print("Fault CRC")
             fault = True
 
         # converter to decimnal
