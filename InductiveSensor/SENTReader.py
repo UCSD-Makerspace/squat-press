@@ -12,18 +12,32 @@ class Fault(Enum):
     NIBBLE_ZERO = 3
     CRC_ERROR = 4
 
+class Status(int):
+    def setFault(self, fault: Fault):
+        """
+        Set the status to include a specific fault.
+        :param fault: The fault to set.
+        """
+        if fault == Fault.NONE:
+            self = 0
+        else:
+            self |= (1 << (fault.value-1))
+
+    def getFault(self, fault: Fault) -> bool:
+        """
+        Check if the status has a specific fault.
+        :param fault: The fault to check for.
+        :return: True if the fault is present, False otherwise.
+        """
+        if fault == Fault.NONE:
+            return self == 0
+        return bool(self & (1 << (fault.value-1)))
+
     def __bool__(self):
-        return self.value != 0
+        return not self == 0
     
     def __repr__(self):
-        values = {
-            Fault.NONE: "No Fault",
-            Fault.SYNC_TOO_LONG: "Sync Pulse too long",
-            Fault.NIBBLE_TOO_LARGE: "Nibble too large",
-            Fault.NIBBLE_ZERO: "Nibble is zero",
-            Fault.CRC_ERROR: "CRC Error",
-        }
-        return values[self]
+        return self
 
 
 class SENTReader:
@@ -214,13 +228,13 @@ class SENTReader:
         # returns status, data1, data2, crc, fault
         # self._cb = self.pi.callback(self.gpio, pigpio.EITHER_EDGE, self._cbf)
         # time.sleep(0.1)
-        fault = Fault.NONE
+        status = 0
         SentFrame = self.frame[:]
         SENTTick = round(SentFrame[1] / 56.0, 2)
 
         # the greatest SYNC sync is 90us.   So trip a fault if this occurs
         if SENTTick > 90:
-            fault = Fault.SYNC_TOO_LONG
+            status.setFault(Fault.SYNC_TOO_LONG)
 
         # print(SentFrame)
         # convert SentFrame to HEX Format including the status and Crc bits
@@ -243,10 +257,10 @@ class SENTReader:
         #        fault = True
         # if datanibble or datanibble2  == 0 then fault = true
         if (int(datanibble, 16) == 0) or (int(datanibble2, 16) == 0):
-            fault = Fault.NIBBLE_ZERO
+            status.setFault(Fault.NIBBLE_ZERO)
         # if datanibble  or datanibble2 > FFF (4096) then fault = True
         if (int(datanibble, 16) > 0xFFF) or (int(datanibble2, 16) > 0xFFF):
-            fault = Fault.NIBBLE_TOO_LARGE
+            status.setFault(Fault.NIBBLE_TOO_LARGE)
         # print(datanibble)
         # CRC checking
         # converting the datanibble values to a binary bit string.
@@ -258,7 +272,7 @@ class SENTReader:
         # checking the crcValue
         # polybitstring is 1*X^4+1*X^3+1*x^2+0*X+1 = '11101'
         if self.crcCheck(InputBitString, "11101", crcBitValue) == False:
-            fault = Fault.CRC_ERROR
+            status.setFault(Fault.CRC_ERROR)
 
         # converter to decimnal
         returnData = int(datanibble, 16)
@@ -270,7 +284,7 @@ class SENTReader:
             returnData2,
             SENTTick,
             SENTCrc,
-            fault,
+            status,
             SENTPeriod,
         )
 
