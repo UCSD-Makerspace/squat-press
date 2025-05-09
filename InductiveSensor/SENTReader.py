@@ -250,8 +250,8 @@ class SENTReader:
 
         # combine the datafield nibbles
         # [2:] is to remove 0x
-        datanibble = "0x" + "".join([str((SentFrame[x]))[2:] for x in range(0, 3)])  
-        datanibble2 = "0x" + "".join([str((SentFrame[x]))[2:] for x in range(3, 6)])
+        datanibble = "0x" + "".join([str((SentFrame[x]))[2:] for x in range(3, 6)])  
+        datanibble2 = "0x" + "".join([str((SentFrame[x]))[2:] for x in range(6, 9)])
 
         # if using SENT mode 0, then data nibbles should be equal
         if self.SENTMode == 0 and datanibble != datanibble2:
