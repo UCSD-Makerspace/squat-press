@@ -18,8 +18,8 @@ def main():
         time.sleep(SAMPLE_TIME)
 
         status, data1, data2, ticktime, crc, errors, syncPulse = p.SENTData()
-        print("Sent Status= %s - 12-bit DATA 1= %4.0f - DATA 2= %4.0f - tickTime(uS)= %4.2f - CRC= %s - Errors= %s - PERIOD = %s" % (status,data1,data2,ticktime,crc,errors,syncPulse))
-        # print("Sent Stat2s= %s - 12-bit DATA 1= %4.0f - DATA 2= %4.0f - tickTime(uS)= %4.2f - CRC= %s - Errors= %s - PERIOD = %s" % (p.statusNibble(),p.dataField1(),p.dataField2(),p.tick(),p.crcNibble(),p.errorFrame(),p.syncPulse()))
+        print(f"""Sent Status= {status} - 12-bit DATA 1= {data1:4.0f} - DATA 2= {data2:4.0f} 
+              - tickTime(uS)= {ticktime:4.0f} - CRC= %{crc} - Errors= %{errors} - PERIOD = %{syncPulse}""")
 
     # stop the thread in SENTReader
     p.stop()
