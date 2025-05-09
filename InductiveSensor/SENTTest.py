@@ -24,8 +24,6 @@ def main():
         if errors == 0 or errors == 8:
             most_recent_data = data1
             time_since_last_data = 0
-            filtered_data = (filtered_data * 0.9) + (data1 * 0.1)
-            print(f"Filtered Data, {filtered_data}, Current Data, {most_recent_data}")
         else:
             time_since_last_data += SAMPLE_TIME
             if time_since_last_data > 2.0:
@@ -34,6 +32,9 @@ def main():
                 p = SENTReader.SENTReader(pi, SENT_GPIO)
                 time.sleep(1.0)
                 continue
+
+        print(f"Filtered Data, {filtered_data}, Current Data, {most_recent_data}")
+        filtered_data = (filtered_data * 0.9) + (most_recent_data * 0.1)
 
         # print(f"Sent Status= {status}, 12-bit DATA 1= {data1:4.0f}, DATA 2= {data2:4.0f} " +
         #       f", tickTime(uS)= {ticktime:4.0f}, CRC= {crc}, Errors= {errors:4b}, PERIOD = {syncPulse}")
