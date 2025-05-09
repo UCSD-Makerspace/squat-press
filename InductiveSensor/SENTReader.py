@@ -256,20 +256,22 @@ class SENTReader:
         # if using SENT mode 0, then data nibbles should be equal
         if self.SENTMode == 0 and datanibble != datanibble2:
             errStatus = errStatus.setFault(Fault.DATA_NOT_EQUAL)
-        
+
         # Check if data is zero
         if (int(datanibble, 16) == 0) or (int(datanibble2, 16) == 0):
             errStatus = errStatus.setFault(Fault.NIBBLE_ZERO)
-        
+
         # Check if data is too large (> 4096)
         if (int(datanibble, 16) > 0xFFF) or (int(datanibble2, 16) > 0xFFF):
             errStatus = errStatus.setFault(Fault.NIBBLE_TOO_LARGE)
-        
+
         # CRC checking
         # converting the datanibble values to a binary bit string.
         # remove the 0x and 0b from the string
         # Should be 24 bits long
-        InputBitString = bin(int((datanibble + datanibble2[2:]), 16))[2:]
+        # InputBitString = bin(int((datanibble + datanibble2[2:]), 16))[2:]
+        # print(InputBitString)
+        InputBitString = f"{int(datanibble[2:], 16):012b}{int(datanibble2[2:], 16):012b}"
         print(InputBitString)
 
         # format is set to remove the leading 0b,  4 characters long
