@@ -9,7 +9,7 @@ def main():
 
     pi = pigpio.pi()
 
-    p = SENTReader(pi, SENT_GPIO)
+    p = SENTReader.SENTReader(pi, SENT_GPIO)
 
     start = time.time()
 
