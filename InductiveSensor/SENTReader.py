@@ -270,13 +270,14 @@ class SENTReader:
         # remove the 0x and 0b from the string
         # Should be 24 bits long
         InputBitString = bin(int((datanibble + datanibble2[2:]), 16))[2:]
-        
+        print(InputBitString)
+
         # format is set to remove the leading 0b,  4 characters long
         crcBitValue = format(int(str(SENTCrc), 16), "04b")
 
         # checking the crcValue
         # polybitstring is x^4 + x^3 + x^2 + 1 = 11101
-        # seed is 0101 (input is padded by 000000, but 0^seed immediately overwrites this)
+        # seed is 0101 (input is padded by 0000, but 0^seed immediately overwrites this)
         if self.crcCheck(InputBitString, "11101", "0101", crcBitValue) == False:
             # print("Fault: CRC Error")
             errStatus = errStatus.setFault(Fault.CRC_ERROR)
@@ -343,7 +344,7 @@ class SENTReader:
                     int(PolyBitString[i] != InputPaddedArray[cur_shift + i])
                 )
 
-        print(f"{InputPaddedArray[LenInput:]}, {crcValue}")
+        print(f"{str(InputPaddedArray[LenInput:])}, {crcValue}")
         if InputPaddedArray[LenInput:] == list(crcValue):
             checkOK = True
 
