@@ -11,6 +11,7 @@ class Fault(Enum):
     NIBBLE_TOO_LARGE = 2
     NIBBLE_ZERO = 3
     CRC_ERROR = 4
+    DATA_NOT_EQUAL = 5
 
 class FaultStatus(int):
     def __init__(self, value: int=0):
@@ -225,7 +226,7 @@ class SENTReader:
                 t = "0x0"
         return t
 
-    def SENTData(self) -> Tuple[int, int, float, int, int, FaultStatus, float]:
+    def SENTData(self) -> Tuple[str, int, int, str, int, FaultStatus, float]:
         # check that data1 = Data2 if they are not equal return fault = True
         # will check the CRC code for faults.  if fault, return = true
         # returns status, data1, data2, crc, fault
@@ -239,42 +240,44 @@ class SENTReader:
         if SENTTick > 90:
             errStatus = errStatus.setFault(Fault.SYNC_TOO_LONG)
 
-        # print(SentFrame)
         # convert SentFrame to HEX Format including the status and Crc bits
         for x in range(2, 10):
             SentFrame[x] = self.ConvertData(SentFrame[x], SENTTick)
+
         SENTCrc = SentFrame[9]
         SENTStatus = SentFrame[2]
         SENTPeriod = SentFrame[0]
-        # print(SentFrame)
+
         # combine the datafield nibbles
-        datanibble = "0x"
-        datanibble2 = "0x"
-        for x in range(3, 6):
-            datanibble = datanibble + str((SentFrame[x]))[2:]
-        for x in range(6, 9):
-            datanibble2 = datanibble2 + str((SentFrame[x]))[2:]
+        # [2:] is to remove 0x
+        datanibble = "0x".join([str((SentFrame[x]))[2:] for x in range(3, 6)])  
+        datanibble2 = "0x".join([str((SentFrame[x]))[2:] for x in range(3, 6)])
+
         # if using SENT mode 0, then data nibbles should be equal
-        # if self.SENTMode == 0 :
-        #    if datanibble != datanibble2:
-        #        fault = True
-        # if datanibble or datanibble2  == 0 then fault = true
+        if self.SENTMode == 0 and datanibble != datanibble2:
+            errStatus = errStatus.setFault(Fault.DATA_NOT_EQUAL)
+        
+        # Check if data is zero
         if (int(datanibble, 16) == 0) or (int(datanibble2, 16) == 0):
             errStatus = errStatus.setFault(Fault.NIBBLE_ZERO)
-        # if datanibble  or datanibble2 > FFF (4096) then fault = True
+        
+        # Check if data is too large (> 4096)
         if (int(datanibble, 16) > 0xFFF) or (int(datanibble2, 16) > 0xFFF):
             errStatus = errStatus.setFault(Fault.NIBBLE_TOO_LARGE)
-        # print(datanibble)
+        
         # CRC checking
         # converting the datanibble values to a binary bit string.
-        # remove the first two characters.  Not needed for crcCheck
+        # remove the 0x and 0b from the string
+        # Should be 24 bits long
         InputBitString = bin(int((datanibble + datanibble2[2:]), 16))[2:]
-        # converting Crcvalue to bin but remove the first two characters 0b
-        # format is set to remove the leading 0b,  4 charactors long
+        
+        # format is set to remove the leading 0b,  4 characters long
         crcBitValue = format(int(str(SENTCrc), 16), "04b")
+
         # checking the crcValue
-        # polybitstring is 1*X^4+1*X^3+1*x^2+0*X+1 = '11101'
-        if self.crcCheck(InputBitString, "010101", crcBitValue) == False:
+        # polybitstring is x^6 + x^4 + x^3 + 1 = 1011001
+        # seed is 010101 (input is padded by 000000, but 0^seed immediately overwrites this)
+        if self.crcCheck(InputBitString, "1011001", "010101", crcBitValue) == False:
             print("Fault: CRC Error")
             errStatus = errStatus.setFault(Fault.CRC_ERROR)
 
@@ -326,23 +329,21 @@ class SENTReader:
     def stop(self):
         self.ThreadStop == True
 
-    def crcCheck(self, InputBitString, PolyBitString, crcValue):
-        # the input string will be a binary string all 6 nibbles of the SENT data
-        # the seed value ( = '0101) is appended to the input string.  Do not use zeros for SENT protocal
-        # this uses the SENT CRC recommended implementation.
+    def crcCheck(self, InputBitString, PolyBitString, seed, crcValue):
         checkOK = False
 
-        LenPolyBitString = len(PolyBitString)
-        PolyBitString = PolyBitString.lstrip("0")
+        PolyBitString = PolyBitString.lstrip("0")           # Remove leading zeros from polynomial
         LenInput = len(InputBitString)
-        InputPaddedArray = list(InputBitString + "0101")
+        InputPaddedArray = list(InputBitString + seed)  # Pad with seed value
         while "1" in InputPaddedArray[:LenInput]:
             cur_shift = InputPaddedArray.index("1")
             for i in range(len(PolyBitString)):
+                # XOR each bit of the polynomial with the input
                 InputPaddedArray[cur_shift + i] = str(
                     int(PolyBitString[i] != InputPaddedArray[cur_shift + i])
                 )
 
+        print(f"{InputPaddedArray[LenInput:]}, {crcValue}")
         if InputPaddedArray[LenInput:] == list(crcValue):
             checkOK = True
 
