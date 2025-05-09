@@ -332,7 +332,7 @@ class SENTReader:
     def crcCheck(self, InputBitString, PolyBitString, seed, crcValue):
         checkOK = False
 
-        PolyBitString = PolyBitString.lstrip("0")           # Remove leading zeros from polynomial
+        # PolyBitString = PolyBitString.lstrip("0")       # Remove leading zeros from polynomial
         LenInput = len(InputBitString)
         InputPaddedArray = list(InputBitString + seed)  # Pad with seed value
         while "1" in InputPaddedArray[:LenInput]:
