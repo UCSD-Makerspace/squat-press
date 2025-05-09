@@ -16,6 +16,7 @@ def main():
     most_recent_data = 0
     time_since_last_data = 0
     filtered_data = 0
+    alpha = 0.6
     while (time.time() - start) < RUN_TIME:
 
         time.sleep(SAMPLE_TIME)
@@ -26,15 +27,16 @@ def main():
             time_since_last_data = 0
         else:
             time_since_last_data += SAMPLE_TIME
-            if time_since_last_data > 2.0:
-                print("No valid data received for 1 second, restarting SENTReader")
+            if time_since_last_data > 5.0:
+                print("No valid data received for 5 seconds, restarting SENTReader")
                 p.stop()
                 p = SENTReader.SENTReader(pi, SENT_GPIO)
-                time.sleep(1.0)
+                time.sleep(3.0)
+                time_since_last_data = 0
                 continue
 
         print(f"Filtered Data, {filtered_data}, Current Data, {most_recent_data}")
-        filtered_data = (filtered_data * 0.9) + (most_recent_data * 0.1)
+        filtered_data = (filtered_data * alpha) + (most_recent_data * (1-alpha))
 
         # print(f"Sent Status= {status}, 12-bit DATA 1= {data1:4.0f}, DATA 2= {data2:4.0f} " +
         #       f", tickTime(uS)= {ticktime:4.0f}, CRC= {crc}, Errors= {errors:4b}, PERIOD = {syncPulse}")
