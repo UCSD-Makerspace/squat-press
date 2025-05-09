@@ -18,8 +18,8 @@ def main():
         time.sleep(SAMPLE_TIME)
 
         status, data1, data2, ticktime, crc, errors, syncPulse = p.SENTData()
-        print(f"Sent Status= {status:4.0f}, 12-bit DATA 1= {data1:4.0f}, DATA 2= {data2:4.0f} " +
-              f", tickTime(uS)= {ticktime:4.0f}, CRC= {crc:4.0f}, Errors= {errors:4b}, PERIOD = {syncPulse}")
+        print(f"Sent Status= {status}, 12-bit DATA 1= {data1:4.0f}, DATA 2= {data2:4.0f} " +
+              f", tickTime(uS)= {ticktime:4.0f}, CRC= {crc}, Errors= {errors:4b}, PERIOD = {syncPulse}")
 
     # stop the thread in SENTReader
     p.stop()

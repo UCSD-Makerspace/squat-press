@@ -274,7 +274,7 @@ class SENTReader:
         crcBitValue = format(int(str(SENTCrc), 16), "04b")
         # checking the crcValue
         # polybitstring is 1*X^4+1*X^3+1*x^2+0*X+1 = '11101'
-        if self.crcCheck(InputBitString, "11101", crcBitValue) == False:
+        if self.crcCheck(InputBitString, "010101", crcBitValue) == False:
             print("Fault: CRC Error")
             errStatus = errStatus.setFault(Fault.CRC_ERROR)
 
