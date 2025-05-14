@@ -10,7 +10,7 @@ import DAC
 def main():
     SENT_GPIO = 18
     RUN_TIME = 6000000000.0
-    SAMPLE_TIME = 0.1
+    SAMPLE_TIME = 0.01
 
     pi = pigpio.pi()
 
@@ -46,7 +46,7 @@ def main():
         #         time_since_last_data = 0
         #         continue
         dac.update()
-        data = dac.get_raw_data()
+        data = dac.get_data_percent()
         if data == 0:
             print("Out of bounds!")
             continue
