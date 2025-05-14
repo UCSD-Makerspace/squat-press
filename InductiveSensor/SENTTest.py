@@ -20,10 +20,11 @@ def main():
     while (time.time() - start) < RUN_TIME:
 
         time.sleep(SAMPLE_TIME)
-
+        new_data = False
         status, data1, data2, ticktime, crc, errors, syncPulse = p.SENTData()
         if errors == 0 or errors == 8:
             most_recent_data = data1
+            new_data = True
             time_since_last_data = 0
         else:
             time_since_last_data += SAMPLE_TIME
@@ -35,7 +36,7 @@ def main():
                 time_since_last_data = 0
                 continue
 
-        print(f"Filtered Data, {filtered_data}, Current Data, {most_recent_data}")
+        print(f"Filtered Data, {filtered_data:0.5f}, Current Data, {(most_recent_data if new_data else 'Old Data')}")
         filtered_data = (filtered_data * alpha) + (most_recent_data * (1-alpha))
 
         # print(f"Sent Status= {status}, 12-bit DATA 1= {data1:4.0f}, DATA 2= {data2:4.0f} " +
