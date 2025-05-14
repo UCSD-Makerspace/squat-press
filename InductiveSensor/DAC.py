@@ -29,5 +29,6 @@ class DAC:
 if __name__ == "__main__":
     reader = DAC()
     while True:
+        reader.read()
         print(f"Data: {reader.get_data():0.5f}, Raw Data: {reader.get_raw_data()}")
         time.sleep(0.05) 
