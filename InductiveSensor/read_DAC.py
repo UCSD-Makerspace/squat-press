@@ -14,5 +14,5 @@ def bytearr_to_int(bytearr):
     return int.from_bytes(bytearr, byteorder='big')
 
 while True:
-    print(f"Data: {read_spi()}")
+    print(f"Data: {bytearr_to_int(read_spi())}")
     time.sleep(0.1)  # Sleep for 100ms to avoid flooding the SPI bus
