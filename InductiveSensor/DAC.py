@@ -4,7 +4,7 @@ import time
 pi = pigpio.pi()
 
 class DAC:
-    def __init__(self, pi=None, clk=1_600_000):
+    def __init__(self, pi=None, clk=1_600_000) -> None:
         if pi is None:
             self.pi = pigpio.pi()
         else:
@@ -22,10 +22,10 @@ class DAC:
         self.data = int.from_bytes(data_1, byteorder="big")
         return data_1
 
-    def get_data(self):
+    def get_data(self) -> int:
         return self.data
 
-    def get_raw_data(self):
+    def get_raw_data(self) -> bytearray:
         return self.raw_data
 
 if __name__ == "__main__":
