@@ -10,24 +10,26 @@ class DAC:
         else:
             self.pi = pi
         self.clk = clk
-        self.raw_data = 0
+        self.raw_data: bytearray = bytearray(2) # 12-bit = 1.5 bytes
+        self.data = 0
 
-    def read(self):
+    def read(self) -> bytearray:
         spi = pi.spi_open(0, self.clk, 0)  # SPI mode 0 = 0, 0
         _, data_1 = pi.spi_read(spi, 2)  
         # data = ((data_1[0] & 0x1F) << 7) + ((data_1[1] & 0xFE) >> 1)
         pi.spi_close(spi)
+        self.raw_data = data_1
+        self.data = int.from_bytes(data_1, byteorder="big")
         return data_1
-    
+
     def get_data(self):
+        return self.data
+
+    def get_raw_data(self):
         return self.raw_data
 
-    @classmethod
-    def bytearr_to_int(bytearr):
-        return int.from_bytes(bytearr, byteorder='big')
-
 if __name__ == "__main__":
-    reader = DAC(pi, 0)
+    reader = DAC(pi)
     while True:
-        print(f"Data: {DAC.bytearr_to_int(reader.read())}")
+        print(f"Data: {reader.get_data():0.5f}, Raw Data: {reader.get_raw_data()}")
         time.sleep(0.05) 
