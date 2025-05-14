@@ -4,6 +4,7 @@ import pigpio
 import sys
 from os import path
 sys.path.append(path.abspath('../Dispenser/tmc2209.py'))
+import tmc2209
 import DAC
 
 def main():
