@@ -46,7 +46,7 @@ def main():
         #         time_since_last_data = 0
         #         continue
         dac.update()
-        data = dac.get_data()
+        data = dac.get_raw_data()
         if data == 0:
             print("Out of bounds!")
             continue
