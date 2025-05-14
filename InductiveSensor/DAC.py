@@ -1,8 +1,6 @@
 import pigpio
 import time
 
-pi = pigpio.pi()
-
 class DAC:
     def __init__(self, pi=None, clk=1_600_000) -> None:
         if pi is None:
@@ -29,7 +27,7 @@ class DAC:
         return self.raw_data
 
 if __name__ == "__main__":
-    reader = DAC(pi)
+    reader = DAC()
     while True:
         print(f"Data: {reader.get_data():0.5f}, Raw Data: {reader.get_raw_data()}")
         time.sleep(0.05) 
