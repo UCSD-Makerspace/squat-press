@@ -1,6 +1,8 @@
 import pigpio
 import time
 
+MAX_VAL = 2**13 - 1
+
 class DAC:
     def __init__(self, pi=None, clk=1_600_000) -> None:
         if pi is None:
@@ -22,6 +24,9 @@ class DAC:
 
     def get_data(self) -> int:
         return self.data
+    
+    def get_data_percent(self) -> float:
+        return self.data / (MAX_VAL)
 
     def get_raw_data(self) -> bytearray:
         return self.raw_data
@@ -30,5 +35,5 @@ if __name__ == "__main__":
     reader = DAC()
     while True:
         reader.read()
-        print(f"Data: {reader.get_data():0.5f}, Raw Data: {reader.get_raw_data()}")
+        print(f"Data: {reader.get_data_percent():0.5f}")
         time.sleep(0.05) 
