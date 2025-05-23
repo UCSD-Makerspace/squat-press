@@ -10,7 +10,7 @@ class PhotoInterruptor(DAC):
     def get_detected(self) -> bool:
         return self._detected
 
-    def update(self) -> bytearray:
+    def update(self) -> bool:
         super().update()
         self._detected = self._data > self.threshold
         return self._detected
@@ -21,5 +21,5 @@ if __name__ == "__main__":
     sensor = PhotoInterruptor()
     while True:
         sensor.update()
-        print(f"Detected: {sensor.get_detected()}Data: {sensor.get_data_percent():0.5f}")
+        print(f"Detected: {sensor.get_detected()}, Data: {sensor.get_data_percent():0.5f}")
         time.sleep(0.05)
