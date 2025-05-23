@@ -12,7 +12,7 @@ class PhotoInterruptor(DAC):
 
     def update(self) -> bool:
         super().update()
-        self._detected = self._data < self.threshold
+        self._detected = super().get_data_percent() < self.threshold
         return self._detected
 
 
