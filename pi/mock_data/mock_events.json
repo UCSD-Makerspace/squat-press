@@ -1,0 +1,13 @@
+[
+  {
+    "timestamp": "15:40:36",
+    "device": "mice_c1",
+    "event_type": "lift",
+    "distance_lifted": 3.25
+  },
+  {
+    "timestamp": "15:41:10",
+    "device": "mice_c1",
+    "event_type": "pellet_taken"
+  }
+]
