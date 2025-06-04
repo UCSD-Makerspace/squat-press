@@ -1,3 +1,6 @@
+# TMC2209 Driver for Raspberry Pi
+# import dispenser.TMC2209.TMC2209 as TMC2209
+
 import pigpio
 from time import sleep
 from enum import Enum
@@ -11,7 +14,7 @@ STEP_PIN = 24
 MS1_PIN = 22
 MS2_PIN = 27
 EN_PIN = 17
-SPR = 200 # 200 spr = 1.8 degrees per step
+DEFAULT_SPR = 200 # 200 spr = 1.8 degrees per step
 
 
 class MicrosteppingMode(Enum):
@@ -48,7 +51,7 @@ class TMC2209:
         ms2_pin: int = MS2_PIN,
         en_pin: int = EN_PIN,
         pi: pigpio.pi = None,
-        spr: int = SPR,
+        spr: int = DEFAULT_SPR,
         start_position: float = 0
     ):
         self.pi = pigpio.pi() if pi is None else pi

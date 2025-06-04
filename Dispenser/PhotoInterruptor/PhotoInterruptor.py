@@ -1,7 +1,7 @@
-from DAC import DAC
+from ADC.ADC import ADC
 
 
-class PhotoInterruptor(DAC):
+class PhotoInterruptor(ADC):
     def __init__(self, pi=None, clk=1_600_000, threshold=0.08) -> None:
         super().__init__(pi, clk)
         self._detected = False

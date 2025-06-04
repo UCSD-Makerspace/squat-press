@@ -3,7 +3,7 @@ import time
 
 MAX_VAL = 2**13 - 1
 
-class DAC:
+class ADC:
     def __init__(self, pi=None, clk=1_600_000) -> None:
         if pi is None:
             self.pi = pigpio.pi()
@@ -32,7 +32,7 @@ class DAC:
         return self._raw_data
 
 if __name__ == "__main__":
-    reader = DAC()
+    reader = ADC()
     while True:
         reader.update()
         print(f"Data: {reader.get_data_percent():0.5f}")

@@ -1,11 +1,11 @@
-import SENTReader
+import lx3302a.SENTReader.SENTReader as SENTReader
 import time
 import pigpio
 import sys
 from os import path
 sys.path.append(path.abspath('../Dispenser/tmc2209.py'))
-import tmc2209
-import DAC
+import dispenser.TMC2209.tmc2209 as tmc2209
+import ADC.ADC as ADC
 
 def main():
     SENT_GPIO = 18
@@ -15,7 +15,7 @@ def main():
     pi = pigpio.pi()
 
     # p = SENTReader.SENTReader(pi, SENT_GPIO)
-    dac = DAC.DAC(pi)
+    adc = ADC.ADC(pi)
 
     start = time.time()
 
@@ -45,8 +45,8 @@ def main():
         #         time.sleep(3.0)
         #         time_since_last_data = 0
         #         continue
-        dac.update()
-        data = dac.get_data_percent()
+        adc.update()
+        data = adc.get_data_percent()
         if data == 0:
             print("Out of bounds!")
             continue

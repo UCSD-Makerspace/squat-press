@@ -1,0 +1,1 @@
+# ADC module - communicates with MCP3201 ADC chip over SPI

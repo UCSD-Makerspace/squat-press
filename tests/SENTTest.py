@@ -1,4 +1,4 @@
-import SENTReader
+import lx3302a.SENTReader.SENTReader as SENTReader
 import time
 import pigpio
 
