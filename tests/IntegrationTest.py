@@ -3,7 +3,6 @@ import time
 import pigpio
 import sys
 from os import path
-sys.path.append(path.abspath('../Dispenser/tmc2209.py'))
 import dispenser.TMC2209.tmc2209 as tmc2209
 import ADC.ADC as ADC
 
