@@ -10,4 +10,5 @@ bash installation.sh
 
 Run The Following Commands
 '''
+echo "export PYTHONPATH=${PYTHONPATH}:/home/mice-squat" > ~/.bashrc
 '''
