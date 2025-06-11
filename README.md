@@ -3,11 +3,11 @@
 Repository for the mice squat press system.
 
 .                                                                                                       
-├── ADC       - Python package for the MCP3201 ADC (used by dispenser, lx3302a)
-├── dispenser - Python package for the dispenser
-├── lx3302a   - Python package for the LX3302A inductive sensor
-├── pi        - Database source code
-└── tests     - Testing scripts
+├── ADC       - Python package for the MCP3201 ADC (used by dispenser, lx3302a)   
+├── dispenser - Python package for the dispenser   
+├── lx3302a   - Python package for the LX3302A inductive sensor   
+├── pi        - Database source code   
+└── tests     - Testing scripts   
 
 ## Installation
 
