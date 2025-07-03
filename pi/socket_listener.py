@@ -5,7 +5,7 @@ import json
 import sqlite3
 from contextlib import closing
 
-DB_PATH = 'database/events.db'  # Adjust if needed
+DB_PATH = 'database/mice_squat.db'  # Adjust if needed
 HOST = '0.0.0.0'  # Listen on all interfaces
 PORT = 5001
 
