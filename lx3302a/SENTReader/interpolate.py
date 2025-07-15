@@ -1,62 +1,31 @@
-import lx3302a.SENTReader.SENTReader as SENTReader
-import lx3302a.SENTReader.interpolate as interpolate
-import time
-import pigpio
+def interpolate(SENT: int, calibration_table) -> float:
+    """
+    Interpolates inputted SENT value based on predefined calibration table
+    to find corresponding mechanical distance.
+    """
 
-def main():
-    SENT_GPIO = 18
-    RUN_TIME = 6000000000.0
-    SAMPLE_TIME = 0.1
+    # Edit if default EEPROM values are different from these SENT values.
+    SENT_MAX, SENT_MIN = 3690, 2240
 
-    pi = pigpio.pi()
-    p = SENTReader.SENTReader(pi, SENT_GPIO)
+    if SENT > SENT_MAX or SENT < SENT_MIN:
+        raise ValueError("Sent value out of range. Check induction sensor setup.")
+    
+    # Interpolation formula: y = y1 + (x - x1) * (y2 - y1) / (x2 - x1)
+    for i in range(len(calibration_table) - 1):
+        dist1, sent1 = calibration_table[i]
+        dist2, sent2 = calibration_table[i + 1]
 
-    start = time.time()
+        if sent2 <= SENT <= sent1:
+            divisor = (SENT - sent1) / (sent2 - sent1)
+            interpolated_distance = dist1 + divisor * (dist2 - dist1)  
+            return interpolated_distance
+    
+    # Example calcuation: We input 3670. 3664 < 3670 < 3672
+    # We find the two points (3664, 0.508) and (3672, 0.254)
+    # Then calculate divisor = (3670 - 3664) / (3672 - 3664) = 6 / 8 = 0.75
+    # Then interpolated_distance = 0.508 + (0.75 * (0.254 - 0.508)) = 0.508 + (-0.1905) = 0.3175
 
-    most_recent_data = 0
-    time_since_last_data = 0
-    filtered_data = 0
-    alpha = 0.6
-    while (time.time() - start) < RUN_TIME:
-
-        time.sleep(SAMPLE_TIME)
-        new_data = False
-        status, data1, data2, ticktime, crc, errors, syncPulse = p.SENTData()
-        if errors == 0 or errors == 8:
-            most_recent_data = data1
-            new_data = True
-            time_since_last_data = 0
-        else:
-            time_since_last_data += SAMPLE_TIME
-            if time_since_last_data > 5.0:
-                print("No valid data received for 5 seconds, restarting SENTReader")
-                p.stop()
-                p = SENTReader.SENTReader(pi, SENT_GPIO)
-                time.sleep(3.0)
-                time_since_last_data = 0
-                continue
-
-        if new_data:
-            mechanical_distance = interpolate(most_recent_data, calibration_table)
-            # Update filtered_data only when new data
-            filtered_data = (filtered_data * alpha) + (most_recent_data * (1-alpha))
-
-        print(
-            f"Filtered Data: {filtered_data:.2f}, "
-            f"Current Data: {most_recent_data if new_data else 'Old Data'}, "
-            f"Depth: {mechanical_distance:.3f} mm"
-        )
-        
-        # print(f"Sent Status= {status}, 12-bit DATA 1= {data1:4.0f}, DATA 2= {data2:4.0f} " +
-        #       f", tickTime(uS)= {ticktime:4.0f}, CRC= {crc}, Errors= {errors:4b}, PERIOD = {syncPulse}")
-
-    # stop the thread in SENTReader
-    p.stop()
-    # clear the pi object instance
-    pi.stop()
-
-if __name__ == "__main__":
-    main()
+    raise RuntimeError("Failed to interpolate SENT value given calibration table. Check input values.")
 
 # Each tuple is (mechanical_distance_mm, SENT_default_EEPROM)
 calibration_table = [
