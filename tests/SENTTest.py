@@ -114,8 +114,10 @@ def main():
     p = SENTReader.SENTReader(pi, SENT_GPIO)
 
     start = time.time()
+    last_interval = start
 
     most_recent_data = 0
+    real_mm_distance = 0.0
     time_since_last_data = 0
     mechanical_distance = 0
     filtered_data = 0
@@ -138,6 +140,12 @@ def main():
                 time.sleep(3.0)
                 time_since_last_data = 0
                 continue
+
+        if (time.time() - last_interval) >= 5.0:
+            real_mm_distance += 0.635
+            print(f"=== 5 seconds elapsed===")
+            print(f"Real mm distance: {real_mm_distance:.3f} mm")
+            last_interval = time.time()
 
         if new_data:
             mechanical_distance = interpolate(most_recent_data, calibration_table)
