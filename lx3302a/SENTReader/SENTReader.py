@@ -13,8 +13,8 @@ class Fault(Enum):
     DATA_NOT_EQUAL = 5
 
 class FaultStatus(int):
-    def __new__(cls, value=0):
-        return super().__new__(cls, value)
+    def __init__(self, value: int=0):
+        super().__init__()
     
     def setFault(self, fault: Fault):
         """
@@ -40,7 +40,7 @@ class FaultStatus(int):
         return not self == 0
     
     def __repr__(self):
-        return f"FaultStatus({int(self)})"
+        return self
 
 
 class SENTReader:
@@ -127,12 +127,12 @@ class SENTReader:
 
         # this will run in a loop and sample the SENT path
         # this sampling is required when 1us sample rate for SENT 3us tick time
-        while not self.ThreadStop:
+        while self.ThreadStop == False:
 
             self.SampleStopped = False
             self._cb = self.pi.callback(self.gpio, pigpio.EITHER_EDGE, self._cbf)
             # wait until sample stopped
-            while not self.SampleStopped:
+            while self.SampleStopped == False:
                 # do nothing
                 time.sleep(0.001)
 
@@ -161,7 +161,8 @@ class SENTReader:
                     self.syncFound = True
                     self.syncWidth = self._high
                     self.syncPeriod = self._period
-                    self.syncTick = self.syncPeriod / 56.0
+                    # self.syncTick = round(self.syncPeriod/56.0,2)
+                    self.syncTick = self.syncPeriod
                     # reset the nibble to zero
                     self.nibble = 0
                     self.SampleStopped = False
@@ -224,7 +225,7 @@ class SENTReader:
                 t = "0x0"
         return t
 
-    def SENTData(self) -> Tuple[str, int, int, float, str, FaultStatus, float]:
+    def SENTData(self) -> Tuple[str, int, int, str, int, FaultStatus, float]:
         # check that data1 = Data2 if they are not equal return fault = True
         # will check the CRC code for faults.  if fault, return = true
         # returns status, data1, data2, crc, fault
@@ -329,12 +330,7 @@ class SENTReader:
         self._cb.cancel()
 
     def stop(self):
-        self.ThreadStop = True
-
-    def close(self):
-        self.stop()
-        self.OutputSampleThread.join()
-        self.cancel()
+        self.ThreadStop == True
 
     def crcCheck(self, InputBitString, PolyBitString, seed, crcValue):
         checkOK = False
