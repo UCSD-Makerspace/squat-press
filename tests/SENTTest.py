@@ -1,5 +1,5 @@
 import lx3302a.SENTReader.SENTReader as SENTReader
-import lx3302a.SENTReader.interpolate as interpolate
+from lx3302a.SENTReader.interpolate import interpolate
 import time
 import pigpio
 
