@@ -117,6 +117,7 @@ def main():
 
     most_recent_data = 0
     time_since_last_data = 0
+    mechanical_distance = 0
     filtered_data = 0
     alpha = 0.6
     while (time.time() - start) < RUN_TIME:
