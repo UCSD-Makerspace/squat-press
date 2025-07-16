@@ -25,4 +25,5 @@ def interpolate(SENT: int, calibration_table) -> float:
     # Then calculate divisor = (3670 - 3664) / (3672 - 3664) = 6 / 8 = 0.75
     # Then interpolated_distance = 0.508 + (0.75 * (0.254 - 0.508)) = 0.508 + (-0.1905) = 0.3175
 
-    raise RuntimeError("Failed to interpolate SENT value given calibration table. Check input values.")
+    #raise RuntimeError("Failed to interpolate SENT value given calibration table. Check input values.")
+    print(f"SENT value not within range of table: {SENT}")
