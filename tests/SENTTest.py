@@ -148,11 +148,11 @@ def main():
             last_interval = time.time()
 
         if new_data:
-            mechanical_distance = interpolate(most_recent_data, calibration_table)
-            if mechanical_distance is None:
-                mechanical_distance = 0.0
             # Update filtered_data only when new data
             filtered_data = (filtered_data * alpha) + (most_recent_data * (1-alpha))
+            mechanical_distance = interpolate(filtered_data, calibration_table)
+            if mechanical_distance is None:
+                mechanical_distance = 0.0
 
         print(
             f"Filtered Data: {filtered_data:.2f}, "
