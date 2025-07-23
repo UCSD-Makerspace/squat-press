@@ -3,7 +3,7 @@ def interpolate(SENT: int, calibration_table) -> float:
     Interpolates inputted SENT value based on predefined calibration table
     to find corresponding mechanical distance.
     """
-    SENT_MAX, SENT_MIN = 4000, 2000
+    SENT_MAX, SENT_MIN = 4000, 1400
 
     if SENT > SENT_MAX or SENT < SENT_MIN:
         print(f"SENT value {SENT} out of sensor range [{SENT_MIN}-{SENT_MAX}].")

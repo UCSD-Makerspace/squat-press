@@ -105,7 +105,6 @@ calibration_table = [
     (24.638, 2265)
 ]
 
-
 def main():
     SENT_GPIO = 18
     RUN_TIME = 6000000000.0
