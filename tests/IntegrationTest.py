@@ -21,7 +21,7 @@ def run_loop(p, pi, adc, motor, config):
         try:
             adc.update()
             adc_data = adc.get_data_percent()
-            if data == 0:
+            if adc_data == 0:
                 print("Out of bounds!")
                 continue
         except Exception as e:
