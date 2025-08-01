@@ -3,72 +3,74 @@ import time
 import pigpio
 import sys
 from os import path
+from config import SystemConfig
 import dispenser.TMC2209.tmc2209 as tmc2209
 import ADC.ADC as ADC
 
-def main():
-    SENT_GPIO = 18
-    RUN_TIME = 6000000000.0
-    SAMPLE_TIME = 0.01
+def low_pass_filter(prev_filtered: float, new_data: float, alpha: float) -> float:
+    return (prev_filtered * alpha) + (new_data * (1 - alpha))
 
-    pi = pigpio.pi()
-
-    # p = SENTReader.SENTReader(pi, SENT_GPIO)
-    adc = ADC.ADC(pi)
-
+def run_loop(p, pi, adc, motor, config):
     start = time.time()
+    filtered_data = 0.0
+    below_threshold = False
+    status, data1, data2, ticktime, crc, errors, syncPulse = p.SENTData()
 
-    most_recent_data = 0
-    time_since_last_data = 0
-    filtered_data = 0
-    alpha = 0.6
-    motor = tmc2209.TMC2209()
-    motor.set_microstepping_mode(tmc2209.MicrosteppingMode.SIXTYFOURTH)
-    dir = 1
-    threshold = 0.7
-    belowThreshold = False
-    while (time.time() - start) < RUN_TIME:
-        
-        time.sleep(SAMPLE_TIME)
-        # For SENT 
-        # status, data1, data2, ticktime, crc, errors, syncPulse = p.SENTData()
-        # if errors == 0 or errors == 8:
-        #     most_recent_data = data1
-        #     time_since_last_data = 0
-        # else:
-        #     time_since_last_data += SAMPLE_TIME
-        #     if time_since_last_data > 5.0:
-        #         print("No valid data received for 5 seconds, restarting SENTReader")
-        #         p.stop()
-        #         p = SENTReader.SENTReader(pi, SENT_GPIO)
-        #         time.sleep(3.0)
-        #         time_since_last_data = 0
-        #         continue
-        adc.update()
-        data = adc.get_data_percent()
-        if data == 0:
-            print("Out of bounds!")
+    while (time.time() - start) < config.RUN_TIME:
+        time.sleep(config.SAMPLE_TIME)
+        try:
+            adc.update()
+            adc_data = adc.get_data_percent()
+            if data == 0:
+                print("Out of bounds!")
+                continue
+        except Exception as e:
+            print(f"Error reading ADC data: {e}")
             continue
 
+        if errors == 0 or errors == 8:
+            most_recent_data = data1
+            new_data = True
+            time_since_last_data = 0
+        else:
+            time_since_last_data += config.SAMPLE_TIME
+            if time_since_last_data > 5.0:
+                print("No valid data received for 5 seconds, restarting SENTReader")
+                p.stop()
+                p = SENTReader.SENTReader(pi, config.ENT_GPIO)
+                time.sleep(3.0)
+                time_since_last_data = 0
+                continue
+    
         most_recent_data = data
+        filtered_data = low_pass_filter(filtered_data, most_recent_data, config.ALPHA)
 
-        filtered_data = (filtered_data * alpha) + (most_recent_data * (1-alpha))
-        print(f"Filtered Pos, {filtered_data:0.5f}, Current Pos, {most_recent_data}")
+        print(f"Filtered Pos: {filtered_data:.5f}, Current Pos: {most_recent_data:.5f}")
 
-        if filtered_data < threshold and not belowThreshold:
-            belowThreshold = True
-            
-            dist = dir*180
+        if filtered_data < config.THRESHOLD and not below_threshold:
+            below_threshold = True
+            dist = config.DISPENSE_ANGLE * config.DISPENSE_DIR
             thread, _ = motor.rotate_degrees_threaded(dist, 0)
-            print(f"Dispensing Pellet...")
-        if filtered_data > threshold and belowThreshold:
-            belowThreshold = False
+            print("Dispensing Pellet...")
+        elif filtered_data > config.THRESHOLD and below_threshold:
+            below_threshold = False
 
-        # print(f"Sent Status= {status}, 12-bit DATA 1= {data1:4.0f}, DATA 2= {data2:4.0f} " +
-        #       f", tickTime(uS)= {ticktime:4.0f}, CRC= {crc}, Errors= {errors:4b}, PERIOD = {syncPulse}")
+def setup(config):
+    pi = pigpio.pi()
+    p = SENTReader.SENTReader(pi, config.SENT_GPIO)
+    adc = ADC.ADC(pi)
+    motor = tmc2209.TMC2209()
+    motor.set_microstepping_mode(tmc2209.MicrosteppingMode.SIXTYFOURTH)
+    return p, pi, adc, motor
 
-    # clear the pi object instance
-    pi.stop()
+def main():
+    config = SystemConfig()
+    p, pi, adc, motor = setup(config)
+
+    try:
+        run_loop(pi, adc, motor, config)
+    finally:
+        pi.stop()
 
 if __name__ == "__main__":
     main()
