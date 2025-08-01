@@ -4,7 +4,7 @@ import pigpio
 import sys
 from os import path
 from config import SystemConfig
-import dispenser.TMC2209.tmc2209 as tmc2209
+import Dispenser.TMC2209.tmc2209 as tmc2209
 import ADC.ADC as ADC
 
 def low_pass_filter(prev_filtered: float, new_data: float, alpha: float) -> float:
