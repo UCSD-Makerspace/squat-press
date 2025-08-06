@@ -49,7 +49,7 @@ def log_event(event_type: str, event_data: Optional[dict] = None):
     if event_type not in ['lift', 'pellet_taken', 'pellet_dispensed']:
         raise ValueError("Invalid event type. Must be 'lift' or 'pellet_taken'.")
     
-    if event_type == 'lift' and distance is None:
+    if event_type == 'lift' and event_data is None:
         raise ValueError("Distance must be provided for lift event.")
     
     # Format: YYYY-MM-DD HH:MM:SS
@@ -61,14 +61,14 @@ def log_event(event_type: str, event_data: Optional[dict] = None):
         'event_type': event_type
     }
 
-    if distance is not None:
-        event['distance_lifted'] = distance
+    if event_data is not None:
+        event['distance_lifted'] = event_data
 
     # Insert into database
     cursor.execute('''
         INSERT INTO events (timestamp, device, event_type, distance_lifted, synced)
         VALUES (?, ?, ?, ?, 0)
-    ''', (timestamp, DEVICE_NAME, event_type, distance))
+    ''', (timestamp, DEVICE_NAME, event_type, event_data))
     
     conn.commit()
     print(f"Event logged: {event_type} at {timestamp}")
