@@ -37,7 +37,7 @@ cursor.execute('''
 conn.commit()
 
 # Main function for event logging.
-def log_event(event_type: str, distance: Optional[float] = None):
+def log_event(event_type: str, event_data: Optional[dict] = None):
     """
     Logs an event with the given type and data.
     
