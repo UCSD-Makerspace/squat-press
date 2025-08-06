@@ -1,5 +1,5 @@
 from PhotoInterruptor import PhotoInterruptor
-from pi.database import log_event
+from pi.database.log_event import log_event
 import time
 
 RUN_TIME = 6000000000.0
