@@ -16,15 +16,15 @@ def main():
 
         if last_state is False and cur_state is True:
             print(f"Pellet dispensed: {LTC.get_detected()}, Data: {LTC.get_data_percent():0.5f}")
-            logger(event_logger, PELLET_DISPENSED, LTC)
+            logger(PELLET_DISPENSED, LTC)
         if last_state is True and cur_state is False:
-            logger(event_logger, PELLET_TAKEN, LTC)
+            logger(PELLET_TAKEN, LTC)
 
         last_state = cur_state
 
-def logger(event_logger, event_type, LTC):
+def logger(event_type, LTC):
     print(f"Logging event: {event_type}, Data: {LTC.get_data_percent():0.5f}")
-    event_logger.log_event(
+    log_event(
         event_type=event_type,
         event_data={
             "detected": LTC.get_detected(),
@@ -34,7 +34,6 @@ def logger(event_logger, event_type, LTC):
 
 if __name__ == "__main__":
     LTC = PhotoInterruptor()
-    event_logger = log_event()
     main()
 
 
