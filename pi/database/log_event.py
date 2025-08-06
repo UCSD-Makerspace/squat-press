@@ -39,7 +39,7 @@ cursor.execute('''
 conn.commit()
 
 # Main function for event logging.
-def log_event(event_type: str, event_data: Optional[float] = None):
+def log_event(event_type: str, event_data: Optional[dict] = None):
     """
     Logs an event with the given type and data.
     
@@ -62,7 +62,7 @@ def log_event(event_type: str, event_data: Optional[float] = None):
     details_json = json.dumps(event_data) if event_data else None
 
     cursor.execute('''
-        INSERT INTO events (timestamp, device, event_type, distance_lifted, synced)
+        INSERT INTO events (timestamp, device, event_type, distance_lifted, synced, details_json)
         VALUES (?, ?, ?, ?, 0, ?)
     ''', (timestamp, DEVICE_NAME, event_type, distance, details_json))
     
