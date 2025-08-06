@@ -46,7 +46,7 @@ def log_event(event_type: str, distance: Optional[float] = None):
         distance: (float, optional): Required for 'lift' events
     """
     
-    if event_type not in ['lift', 'pellet_taken']:
+    if event_type not in ['lift', 'pellet_taken', 'pellet_dispensed']:
         raise ValueError("Invalid event type. Must be 'lift' or 'pellet_taken'.")
     
     if event_type == 'lift' and distance is None:
