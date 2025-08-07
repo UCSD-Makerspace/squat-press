@@ -1,7 +1,7 @@
 import lx3302a.SENTReader.SENTReader as SENTReader
 import time
 import pigpio
-import sys
+import threading
 from os import path
 from config import SystemConfig
 from time import sleep
@@ -27,6 +27,7 @@ def test_linear_sensor(pi, config):
     p.stop()
 
 def test_photo_interruptor(pi, config):
+    logging.info("Testing Photo Interruptor...")
     LTC = PhotoInterruptor(pi)
     last_state = LTC.get_detected()
     start = time.time()
@@ -42,7 +43,7 @@ def test_photo_interruptor(pi, config):
             print(f"Pellet taken: {LTC.get_detected()}, Data: {LTC.get_data_percent():0.5f}")
         last_state = cur_state
 
-def test_motor(pi):
+def test_motor():
     logging.info("Testing Stepper Motor...")
     motor = tmc2209.TMC2209()
     motor.set_microstepping_mode(tmc2209.MicrosteppingMode.SIXTYFOURTH)
@@ -61,15 +62,28 @@ def main():
     config = SystemConfig()
     pi = pigpio.pi()
 
+    threads = []
+
     try:
         if TEST_LINEAR_SENSOR:
             test_linear_sensor(pi, config)
-        
+            thread = threading.Thread(target=test_linear_sensor, args=(pi, config))
+            threads.append(thread)
+            thread.start()
         if TEST_PHOTO_INTERRUPTOR:
             test_photo_interruptor(pi, config)
-        
+            thread = threading.Thread(target=test_photo_interruptor, args=(pi, config))
+            threads.append(thread)
+            thread.start()
         if TEST_MOTOR:
-            test_motor(pi)
+            test_motor()
+            thread = threading.Thread(target=test_motor, args=())
+            threads.append(thread)
+            thread.start()
+        for thread in threads:
+            thread.join()
+    except KeyboardInterrupt:
+        logging.info("Tests interrupted by user.")
     finally:
         pi.stop()
         logging.info("Tests completed. Cleaning up...")
