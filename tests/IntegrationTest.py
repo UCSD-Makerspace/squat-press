@@ -68,7 +68,7 @@ def main():
     p, pi, adc, motor = setup(config)
 
     try:
-        run_loop(pi, adc, motor, config)
+        run_loop(p, pi, adc, motor, config)
     finally:
         pi.stop()
 
