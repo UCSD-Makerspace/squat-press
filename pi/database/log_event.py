@@ -1,6 +1,7 @@
 import sqlite3
 from typing import Optional
 from datetime import datetime
+import json
 import os
 
 ###############################################################
@@ -31,13 +32,14 @@ cursor.execute('''
         device TEXT NOT NULL,
         event_type TEXT NOT NULL,
         distance_lifted REAL,
-        synced INTEGER DEFAULT 0        
+        synced INTEGER DEFAULT 0,
+        details_json TEXT     
     )
 ''')    
 conn.commit()
 
 # Main function for event logging.
-def log_event(event_type: str, distance: Optional[float] = None):
+def log_event(event_type: str, event_data: Optional[dict] = None):
     """
     Logs an event with the given type and data.
     
@@ -45,30 +47,24 @@ def log_event(event_type: str, distance: Optional[float] = None):
         event_type (str): The type of the event.
         distance: (float, optional): Required for 'lift' events
     """
-    
-    if event_type not in ['lift', 'pellet_taken']:
+    allowed_types = {'lift', 'pellet_taken', 'pellet_dispensed'}
+    if event_type not in allowed_types:
         raise ValueError("Invalid event type. Must be 'lift' or 'pellet_taken'.")
     
-    if event_type == 'lift' and distance is None:
-        raise ValueError("Distance must be provided for lift event.")
-    
-    # Format: YYYY-MM-DD HH:MM:SS
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    distance = None
 
-    event = {
-        'timestamp': timestamp,
-        'device': DEVICE_NAME,
-        'event_type': event_type
-    }
+    if event_type == "lift":
+        if not event_data or 'distance_lifted' not in event_data:
+            raise ValueError("Missing distance_lifted for lift event")
+        distance = event_data['distance_lifted']
 
-    if distance is not None:
-        event['distance_lifted'] = distance
+    details_json = json.dumps(event_data) if event_data else None
 
-    # Insert into database
     cursor.execute('''
-        INSERT INTO events (timestamp, device, event_type, distance_lifted, synced)
-        VALUES (?, ?, ?, ?, 0)
-    ''', (timestamp, DEVICE_NAME, event_type, distance))
+        INSERT INTO events (timestamp, device, event_type, distance_lifted, synced, details_json)
+        VALUES (?, ?, ?, ?, 0, ?)
+    ''', (timestamp, DEVICE_NAME, event_type, distance, details_json))
     
     conn.commit()
     print(f"Event logged: {event_type} at {timestamp}")
