@@ -1,4 +1,4 @@
-import dispenser.TMC2209.tmc2209 as tmc2209
+import Dispenser.TMC2209.tmc2209 as tmc2209
 from time import sleep
 import pigpio
 
