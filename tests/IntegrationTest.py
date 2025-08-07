@@ -66,20 +66,18 @@ def main():
 
     try:
         if TEST_LINEAR_SENSOR:
-            test_linear_sensor(pi, config)
             thread = threading.Thread(target=test_linear_sensor, args=(pi, config))
             threads.append(thread)
             thread.start()
         if TEST_PHOTO_INTERRUPTOR:
-            test_photo_interruptor(pi, config)
             thread = threading.Thread(target=test_photo_interruptor, args=(pi, config))
             threads.append(thread)
             thread.start()
         if TEST_MOTOR:
-            test_motor()
             thread = threading.Thread(target=test_motor, args=())
             threads.append(thread)
             thread.start()
+            
         for thread in threads:
             thread.join()
     except KeyboardInterrupt:
