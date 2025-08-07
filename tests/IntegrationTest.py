@@ -9,7 +9,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 import Dispenser.TMC2209.tmc2209 as tmc2209
-from Dispenser.PhotoInterruptor import PhotoInterruptor
+from Dispenser.PhotoInterruptor.PhotoInterruptor import PhotoInterruptor
 import ADC.ADC as ADC
 
 TEST_LINEAR_SENSOR = False
