@@ -2,7 +2,7 @@ from ADC.ADC import ADC
 
 
 class PhotoInterruptor(ADC):
-    def __init__(self, pi=None, clk=1_600_000, threshold=0.1) -> None:
+    def __init__(self, pi=None, clk=1_600_000, threshold=0.15) -> None:
         super().__init__(pi, clk)
         self._detected = False
         self.threshold = threshold
