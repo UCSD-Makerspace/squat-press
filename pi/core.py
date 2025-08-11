@@ -1,7 +1,16 @@
 import lx3302a.SENTReader.SENTReader as SENTReader
-from lx3302a.SENTReader.interpolate import interpolate
 import time
 import pigpio
+import threading
+from os import path
+from tests.config import SystemConfig
+from time import sleep
+import logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+import Dispenser.TMC2209.tmc2209 as tmc2209
+from Dispenser.PhotoInterruptor.PhotoInterruptor import PhotoInterruptor
+import ADC.ADC as ADC
 
 #### Consts ####
 SENT_GPIO = 18
@@ -18,4 +27,7 @@ def main():
     
 
     beambreak.record_event()
+
+if __name__ == "__main__":
     
+    main()
