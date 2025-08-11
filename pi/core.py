@@ -32,8 +32,8 @@ def init_hardware(pi, config):
         motor = tmc2209.TMC2209()
         motor.set_microstepping_mode(tmc2209.MicrosteppingMode.SIXTYFOURTH)
         return p, LTC, motor
-    except:
-        logging.error("Failed to initialize hardware components.")
+    except Exception as e:
+        logging.error(f"Failed to initialize hardware components: {e}")
         return None, None, None
 
 # Core loop for hardware communication #
