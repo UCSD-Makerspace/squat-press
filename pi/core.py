@@ -15,42 +15,54 @@ import ADC.ADC as ADC
 
 #### Consts ####
 SENT_GPIO = 18
-TEST_LINEAR_SENSOR = False
-TEST_PHOTO_INTERRUPTOR = True
-TEST_MOTOR = True
 
-def dispense_pellet():
+def dispense_pellet(motor):
     logging.info("Lift detected: dispensing pellet.")
+    dir = 1
+    dist = dir * 180
+    thread, _ = motor.rotate_degrees_threaded(dist, 0)
+    thread.join()
+
+def init_hardware(pi, config):
+    try:
+        p = SENTReader.SENTReader(pi, config.SENT_GPIO)
+
+        LTC = PhotoInterruptor(pi)
+
+        motor = tmc2209.TMC2209()
+        motor.set_microstepping_mode(tmc2209.MicrosteppingMode.SIXTYFOURTH)
+        return p, LTC, motor
+    except:
+        logging.error("Failed to initialize hardware components.")
+        return None, None, None
 
 # Core loop for hardware communication #
 def main():
     config = SystemConfig()
     pi = pigpio.pi()
-    p = SENTReader.SENTReader(pi, SENT_GPIO)
 
-    threads = []
+    p, LTC, motor = init_hardware(pi, config)
+    if not all([p, LTC, motor]):
+        logging.error("Hardware initialization failed. Exiting.")
+        return
+    
+    last_state = LTC.get_detected()
+    start = time.time()
 
-    try:
-        if TEST_LINEAR_SENSOR:
-            thread = threading.Thread(target=test_linear_sensor, args=(pi, config))
-            threads.append(thread)
-            thread.start()
-        if TEST_PHOTO_INTERRUPTOR:
-            thread = threading.Thread(target=test_photo_interruptor, args=(pi, config))
-            threads.append(thread)
-            thread.start()
-        if TEST_MOTOR:
-            thread = threading.Thread(target=test_motor, args=())
-            threads.append(thread)
-            thread.start()
-            
-        for thread in threads:
-            thread.join()
-    except KeyboardInterrupt:
-        logging.info("Tests interrupted by user.")
-    finally:
-        pi.stop()
-        logging.info("Tests completed. Cleaning up...")
+    while time.time() - start < config.RUN_TIME:
+        time.sleep(0.1)
+        LTC.update()
+        cur_state = LTC.get_detected
+        if last_state is False and cur_state is True:
+            dispense_pellet(motor)
+            print(f"Pellet dispensed: {LTC.get_detected()}, Data: {LTC.get_data_percent():0.5f}")
+        if last_state is True and cur_state is False:
+            print(f"Pellet taken: {LTC.get_detected()}, Data: {LTC.get_data_percent():0.5f}")
+            dispense_pellet(motor)
+
+        last_state = cur_state
+    
+    p.stop()
 
 if __name__ == "__main__":
     main()
