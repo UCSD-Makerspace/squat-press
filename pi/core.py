@@ -52,7 +52,7 @@ def main():
     while time.time() - start < config.RUN_TIME:
         time.sleep(0.1)
         LTC.update()
-        cur_state = LTC.get_detected
+        cur_state = LTC.get_detected()
         if last_state is False and cur_state is True:
             dispense_pellet(motor)
             print(f"Pellet dispensed: {LTC.get_detected()}, Data: {LTC.get_data_percent():0.5f}")
