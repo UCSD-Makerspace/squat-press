@@ -4,7 +4,6 @@ import pigpio
 import threading
 from os import path
 from tests.config import SystemConfig
-from tests.IntegrationTest import test_linear_sensor, test_photo_interruptor, test_motor
 from time import sleep
 import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
