@@ -65,7 +65,6 @@ def cleanup_hardware(p, motor, pi):
     except Exception as e:
         logging.error(f"Error during cleanup: {e}")
 
-# Core loop for hardware communication #
 def main():
     config = SystemConfig()
     pi = None
@@ -83,24 +82,49 @@ def main():
             logging.error("Hardware initialization failed. Exiting.")
             return
         
-        last_state = LTC.get_detected()
-        start = time.time()
+        last_LTC_state = LTC.get_detected()
 
+        start = time.time()
         while time.time() - start < config.RUN_TIME:
-            time.sleep(0.1)
-            
-            try:
+            time.sleep(config.SAMPLE_TIME)
+
+            recent_SENT = 0
+            time_since_last_SENT = 0
+            filtered_SENT = 0
+            status, data1, data2, ticktime, crc, errors, syncPulse = p.SENTData()
+            new_SENT_data = False
+
+            try:                
                 LTC.update()
-                cur_state = LTC.get_detected()
-                
-                if last_state is False and cur_state is True:
-                    print(f"Pellet detected: {LTC.get_detected()}, Data: {LTC.get_data_percent():0.5f}")
+                cur_LTC_state = LTC.get_detected()
+
+                if errors == 0 or errors == 8:
+                    recent_SENT = data1
+                    new_SENT_data = True
+                    time_since_last_SENT = 0
+                else:
+                    time_since_last_SENT += config.SAMPLE_TIME
+                    if time_since_last_SENT > 5.0:
+                        print("No valid data received for 5 seconds, restarting SENTReader")
+                        p.stop()
+                        p = SENTReader.SENTReader(pi, SENT_GPIO)
+                        time.sleep(3.0)
+                        time_since_last_SENT = 0
+                        continue
+
+                print(f"Filtered Data, {filtered_SENT:0.5f}, Current Data, {(recent_SENT if new_SENT_data else 'Old Data')}")
+                filtered_SENT = (filtered_SENT * config.ALPHA) + (recent_SENT * (1-config.ALPHA))
+                if filtered_SENT < 3000.00:
+                    print(f"Lift detected: {filtered_SENT:0.5f}, rotating motor to dispense pellet...")
                     dispense_pellet(motor)
+
+                if last_LTC_state is False and cur_LTC_state is True:
+                    print(f"Pellet detected: {LTC.get_detected()}, Data: {LTC.get_data_percent():0.5f}")
                 
-                elif last_state is True and cur_state is False:
+                elif last_LTC_state is True and cur_LTC_state is False:
                     print(f"Pellet taken: {LTC.get_detected()}, Data: {LTC.get_data_percent():0.5f}")
 
-                last_state = cur_state
+                last_LTC_state = cur_LTC_state
                 
             except Exception as e:
                 logging.error(f"Error in main loop: {e}")
