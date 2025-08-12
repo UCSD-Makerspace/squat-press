@@ -83,14 +83,13 @@ def main():
             return
         
         last_LTC_state = LTC.get_detected()
+        filtered_SENT = 0.0
+        time_since_last_SENT = 0.0
 
         start = time.time()
         while time.time() - start < config.RUN_TIME:
             time.sleep(config.SAMPLE_TIME)
 
-            recent_SENT = 0
-            time_since_last_SENT = 0
-            filtered_SENT = 0
             status, data1, data2, ticktime, crc, errors, syncPulse = p.SENTData()
             new_SENT_data = False
 
@@ -101,7 +100,7 @@ def main():
                 if errors == 0 or errors == 8:
                     recent_SENT = data1
                     new_SENT_data = True
-                    time_since_last_SENT = 0
+                    time_since_last_SENT = 0.0 
                 else:
                     time_since_last_SENT += config.SAMPLE_TIME
                     if time_since_last_SENT > 5.0:
@@ -109,7 +108,7 @@ def main():
                         p.stop()
                         p = SENTReader.SENTReader(pi, SENT_GPIO)
                         time.sleep(3.0)
-                        time_since_last_SENT = 0
+                        time_since_last_SENT = 0.0
                         continue
 
                 if new_SENT_data:

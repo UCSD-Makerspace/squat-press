@@ -9,3 +9,4 @@ class SystemConfig:
     SENT_GPIO: int = 18
     DISPENSE_ANGLE: float = 180.0
     DISPENSE_DIR: int = 1
+    MOTOR_COOLDOWN: float = 1.0
