@@ -85,6 +85,8 @@ def main():
         last_LTC_state = LTC.get_detected()
         filtered_SENT = 0.0
         time_since_last_SENT = 0.0
+        recent_SENT = 0
+        time_since_last_SENT = 0.0
 
         start = time.time()
         while time.time() - start < config.RUN_TIME:
@@ -113,11 +115,13 @@ def main():
 
                 if new_SENT_data:
                     filtered_SENT = (filtered_SENT * config.ALPHA) + (recent_SENT * (1-config.ALPHA))
+                    
+                    if filtered_SENT < 3000.00:
+                        print(f"Lift detected: {filtered_SENT:0.5f}, rotating motor to dispense pellet...")
+                        dispense_pellet(motor)
+                        
                 print(f"Filtered Data, {filtered_SENT:0.5f}, Current Data, {(recent_SENT if new_SENT_data else 'Old Data')}")
     
-                if filtered_SENT < 3000.00:
-                    print(f"Lift detected: {filtered_SENT:0.5f}, rotating motor to dispense pellet...")
-                    dispense_pellet(motor)
 
                 if last_LTC_state is False and cur_LTC_state is True:
                     print(f"Pellet detected: {LTC.get_detected()}, Data: {LTC.get_data_percent():0.5f}")
