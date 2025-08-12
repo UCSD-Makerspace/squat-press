@@ -112,8 +112,10 @@ def main():
                         time_since_last_SENT = 0
                         continue
 
+                if new_SENT_data:
+                    filtered_SENT = (filtered_SENT * config.ALPHA) + (recent_SENT * (1-config.ALPHA))
                 print(f"Filtered Data, {filtered_SENT:0.5f}, Current Data, {(recent_SENT if new_SENT_data else 'Old Data')}")
-                filtered_SENT = (filtered_SENT * config.ALPHA) + (recent_SENT * (1-config.ALPHA))
+    
                 if filtered_SENT < 3000.00:
                     print(f"Lift detected: {filtered_SENT:0.5f}, rotating motor to dispense pellet...")
                     dispense_pellet(motor)
