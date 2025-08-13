@@ -14,6 +14,8 @@ import ADC.ADC as ADC
 
 #### Consts ####
 SENT_GPIO = 18
+MIN_SENT = 2100
+MAX_SENT = 3000
 
 def dispense_pellet_step(motor, step_degrees) -> bool:
     if motor is None:
@@ -127,7 +129,7 @@ def main():
                 if new_SENT_data:
                     filtered_SENT = (filtered_SENT * config.ALPHA) + (recent_SENT * (1-config.ALPHA))
                     
-                if not is_dispensing and filtered_SENT < 3000.00:
+                if not is_dispensing and filtered_SENT > MIN_SENT and filtered_SENT < MAX_SENT:
                     if skip_count < 10:
                         skip_count += 1
                     else:
