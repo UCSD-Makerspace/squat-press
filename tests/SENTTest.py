@@ -112,6 +112,7 @@ def main():
 
     pi = pigpio.pi()
     p = SENTReader.SENTReader(pi, SENT_GPIO)
+    
 
     start = time.time()
     last_interval = start
@@ -121,6 +122,7 @@ def main():
     time_since_last_data = 0
     mechanical_distance = 0
     filtered_data = 0
+    skip_count = 0
     alpha = 0.6
     while (time.time() - start) < RUN_TIME:
 
@@ -128,6 +130,9 @@ def main():
         new_data = False
         status, data1, data2, ticktime, crc, errors, syncPulse = p.SENTData()
         if errors == 0 or errors == 8:
+            if skip_count < 10:
+                skip_count += 1
+                continue
             most_recent_data = data1
             new_data = True
             time_since_last_data = 0
