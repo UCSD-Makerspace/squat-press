@@ -152,6 +152,7 @@ def main():
                                 step_size = 30
                                 if dispense_pellet_step(motor, step_size):
                                     total_rotation += step_size
+                                    last_rotation_time = current_time
                                     print(f"Motor rotated {step_size} degrees, total rotation: {total_rotation:.2f} degrees")
                                 
 
