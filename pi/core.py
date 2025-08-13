@@ -87,7 +87,7 @@ def main():
         time_since_last_SENT = 0.0
         recent_SENT = 0
         last_dispense_time = 0.0
-        COOLDOWN_DURATION = config.MOTOR_COOLDOWN
+        needs_dispense = False
 
         start = time.time()
         while time.time() - start < config.RUN_TIME:
@@ -118,12 +118,16 @@ def main():
                 if new_SENT_data:
                     filtered_SENT = (filtered_SENT * config.ALPHA) + (recent_SENT * (1-config.ALPHA))
                     
-                    time_since_last_dispense = current_time - last_dispense_time
-
-                    if filtered_SENT < 3000.00 and time_since_last_dispense >= COOLDOWN_DURATION:
+                if not needs_dispense:
+                    if filtered_SENT < 3000.00:
+                        needs_dispense = True
                         print(f"Lift detected: {filtered_SENT:0.5f}, rotating motor to dispense pellet...")
                         dispense_pellet(motor)
-                        last_dispense_time = current_time
+
+                if needs_dispense and cur_LTC_state:
+                    print(f"Pellet dispense detected, stopping motor")
+                    needs_dispense = False
+                    motor.stop()
 
                 #print(f"Filtered Data, {filtered_SENT:0.5f}, Current Data, {(recent_SENT if new_SENT_data else 'Old Data')}")
     
