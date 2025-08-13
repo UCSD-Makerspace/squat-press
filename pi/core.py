@@ -1,4 +1,3 @@
-import lx3302a.SENTReader.SENTReader as SENTReader
 import time
 import pigpio
 import threading
@@ -8,14 +7,16 @@ from time import sleep
 import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
+import ADC.ADC as ADC
 import Dispenser.TMC2209.tmc2209 as tmc2209
 from Dispenser.PhotoInterruptor.PhotoInterruptor import PhotoInterruptor
-import ADC.ADC as ADC
+import lx3302a.SENTReader.SENTReader as SENTReader
+from rotate import rotate_step, dispense, jitter
 
 #### Consts ####
 SENT_GPIO = 18
 MIN_SENT = 2100
-MAX_SENT = 3000
+MAX_SENT = 2800
 
 def dispense_pellet_step(motor, step_degrees) -> bool:
     if motor is None:
@@ -91,14 +92,6 @@ def main():
         filtered_SENT = 0.0
         time_since_last_SENT = 0.0
         recent_SENT = 0
-        skip_count = 0
-
-        is_dispensing = False
-        total_rotation = 0.0
-        dispense_start_time = 0
-        last_rotation_time = 0
-        MAX_DISPENSE_TIME = 20.0
-        ROTATE_COOLDOWN = 1.0
 
         start = time.time()
         while time.time() - start < config.RUN_TIME:
@@ -129,36 +122,8 @@ def main():
                 if new_SENT_data:
                     filtered_SENT = (filtered_SENT * config.ALPHA) + (recent_SENT * (1-config.ALPHA))
                     
-                if not is_dispensing and filtered_SENT > MIN_SENT and filtered_SENT < MAX_SENT:
-                    if skip_count < 10:
-                        skip_count += 1
-                    else:
-                        print(f"Lift detected: {filtered_SENT:0.5f}, rotating motor to dispense pellet...")
-                        is_dispensing = True
-                        last_rotation_time = 0
-                        dispense_start_time = current_time
-
-                if is_dispensing:
-                    current_time = time.time()
-                    if LTC.get_detected():
-                        print(f"Pellet dispense detected, stopping motor")
-                        is_dispensing = False
-                        motor.stop()
-                    else:
-                        elapsed_time = current_time - dispense_start_time
-                        if elapsed_time > MAX_DISPENSE_TIME:
-                            print(f"Max dispense time exceeded ({elapsed_time:.2f}s), stopping motor")
-                            is_dispensing = False
-                            motor.stop()
-                        else:
-                            last_rotation = current_time - last_rotation_time
-                            if last_rotation >= ROTATE_COOLDOWN:
-                                step_size = 90
-                                if dispense_pellet_step(motor, step_size):
-                                    total_rotation += step_size
-                                    last_rotation_time = current_time
-                                    print(f"Motor rotated {step_size} degrees, total rotation: {total_rotation:.2f} degrees")
-                                
+                if filtered_SENT > MIN_SENT or filtered_SENT < MAX_SENT:
+                    dispense(motor)
 
                 #print(f"Filtered Data, {filtered_SENT:0.5f}, Current Data, {(recent_SENT if new_SENT_data else 'Old Data')}")
     
