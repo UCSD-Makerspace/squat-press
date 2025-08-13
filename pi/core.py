@@ -100,6 +100,7 @@ def main():
 
         start = time.time()
         while time.time() - start < config.RUN_TIME:
+            current_time = time.time()
             time.sleep(config.SAMPLE_TIME)
 
             status, data1, data2, ticktime, crc, errors, syncPulse = p.SENTData()
