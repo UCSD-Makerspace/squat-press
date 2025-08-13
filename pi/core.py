@@ -100,7 +100,6 @@ def main():
 
         start = time.time()
         while time.time() - start < config.RUN_TIME:
-            current_time = time.time()
             time.sleep(config.SAMPLE_TIME)
 
             status, data1, data2, ticktime, crc, errors, syncPulse = p.SENTData()
@@ -137,6 +136,7 @@ def main():
                         dispense_start_time = current_time
 
                 if is_dispensing:
+                    current_time = time.time()
                     if LTC.get_detected():
                         print(f"Pellet dispense detected, stopping motor")
                         is_dispensing = False
