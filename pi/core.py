@@ -95,6 +95,7 @@ def main():
         total_rotation = 0.0
         dispense_start_time = 0
         MAX_DISPENSE_TIME = 20.0
+        ROTATE_COOLDOWN = 0.5
 
         start = time.time()
         while time.time() - start < config.RUN_TIME:
@@ -131,6 +132,7 @@ def main():
                     else:
                         print(f"Lift detected: {filtered_SENT:0.5f}, rotating motor to dispense pellet...")
                         is_dispensing = True
+                        last_rotation_time = 0
                         dispense_start_time = current_time
 
                 if is_dispensing:
@@ -145,10 +147,12 @@ def main():
                             is_dispensing = False
                             motor.stop()
                         else:
-                            step_size = 30
-                            if dispense_pellet_step(motor, step_size):
-                                total_rotation += step_size
-                                print(f"Motor rotated {step_size} degrees, total rotation: {total_rotation:.2f} degrees")
+                            last_rotation = current_time - last_rotation_time
+                            if last_rotation >= ROTATE_COOLDOWN:
+                                step_size = 30
+                                if dispense_pellet_step(motor, step_size):
+                                    total_rotation += step_size
+                                    print(f"Motor rotated {step_size} degrees, total rotation: {total_rotation:.2f} degrees")
                                 
 
                 #print(f"Filtered Data, {filtered_SENT:0.5f}, Current Data, {(recent_SENT if new_SENT_data else 'Old Data')}")
