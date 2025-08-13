@@ -94,6 +94,7 @@ def main():
         is_dispensing = False
         total_rotation = 0.0
         dispense_start_time = 0
+        last_rotation_time = 0
         MAX_DISPENSE_TIME = 20.0
         ROTATE_COOLDOWN = 0.5
 
