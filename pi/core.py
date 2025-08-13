@@ -15,7 +15,7 @@ import ADC.ADC as ADC
 #### Consts ####
 SENT_GPIO = 18
 
-def dispense_pellet_step(motor, step_degrees=30) -> bool:
+def dispense_pellet_step(motor, step_degrees) -> bool:
     if motor is None:
         logging.error("Motor not initialized, cannot dispense pellet")
         return
@@ -96,7 +96,7 @@ def main():
         dispense_start_time = 0
         last_rotation_time = 0
         MAX_DISPENSE_TIME = 20.0
-        ROTATE_COOLDOWN = 0.5
+        ROTATE_COOLDOWN = 1.0
 
         start = time.time()
         while time.time() - start < config.RUN_TIME:
@@ -151,7 +151,7 @@ def main():
                         else:
                             last_rotation = current_time - last_rotation_time
                             if last_rotation >= ROTATE_COOLDOWN:
-                                step_size = 30
+                                step_size = 90
                                 if dispense_pellet_step(motor, step_size):
                                     total_rotation += step_size
                                     last_rotation_time = current_time
