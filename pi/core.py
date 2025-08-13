@@ -103,9 +103,6 @@ def main():
                 cur_LTC_state = LTC.get_detected()
 
                 if errors == 0 or errors == 8:
-                    if skip_count < 10:
-                        skip_count += 1
-                        continue
                     recent_SENT = data1
                     new_SENT_data = True
                     time_since_last_SENT = 0.0 
@@ -124,6 +121,9 @@ def main():
                     
                 if not needs_dispense:
                     if filtered_SENT < 3000.00:
+                        if skip_count < 10:
+                            skip_count += 1
+                            continue
                         needs_dispense = True
                         print(f"Lift detected: {filtered_SENT:0.5f}, rotating motor to dispense pellet...")
                         dispense_pellet(motor)
