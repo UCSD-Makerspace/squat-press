@@ -90,7 +90,6 @@ def main():
 
         needs_dispense = False
 
-        time.sleep(3.0) # Let hardware stabilize
         start = time.time()
         while time.time() - start < config.RUN_TIME:
             time.sleep(config.SAMPLE_TIME)
@@ -123,15 +122,16 @@ def main():
                     if filtered_SENT < 3000.00:
                         if skip_count < 10:
                             skip_count += 1
-                            continue
-                        needs_dispense = True
-                        print(f"Lift detected: {filtered_SENT:0.5f}, rotating motor to dispense pellet...")
-                        dispense_pellet(motor)
+                        else:
+                            needs_dispense = True
+                            print(f"Lift detected: {filtered_SENT:0.5f}, rotating motor to dispense pellet...")
+                            dispense_pellet(motor)
 
-                if needs_dispense and cur_LTC_state:
-                    print(f"Pellet dispense detected, stopping motor")
-                    needs_dispense = False
-                    motor.stop()
+                if needs_dispense:
+                    if LTC.get_detected():
+                        print(f"Pellet dispense detected, stopping motor")
+                        needs_dispense = False
+                        motor.stop()
 
                 #print(f"Filtered Data, {filtered_SENT:0.5f}, Current Data, {(recent_SENT if new_SENT_data else 'Old Data')}")
     
