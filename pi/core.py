@@ -20,13 +20,12 @@ def dispense_pellet(motor):
         logging.error("Motor not initialized, cannot dispense pellet")
         return
     
-    logging.info("Dispensing pellet.")
     dir = 1
     dist = dir * 180
     try:
         thread, _ = motor.rotate_degrees_threaded(dist, 0)
         thread.join()
-        logging.info("Pellet dispensed successfully")
+        logging.info("Motor attempting to dispense pellet.")
     except Exception as e:
         logging.error(f"Failed to dispense pellet: {e}")
 
@@ -83,15 +82,16 @@ def main():
             return
         
         last_LTC_state = LTC.get_detected()
+
         filtered_SENT = 0.0
         time_since_last_SENT = 0.0
         recent_SENT = 0
-        last_dispense_time = 0.0
+
         needs_dispense = False
 
+        time.sleep(3.0) # Let hardware stabilize
         start = time.time()
         while time.time() - start < config.RUN_TIME:
-            current_time = time.time()
             time.sleep(config.SAMPLE_TIME)
 
             status, data1, data2, ticktime, crc, errors, syncPulse = p.SENTData()
