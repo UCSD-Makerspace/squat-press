@@ -53,7 +53,7 @@ def jitter(motor, jitter_degrees, jitter_amount) -> bool:
         direction = 1
         for _ in range(jitter_amount):
             step = jitter_degrees * direction
-            thread, _ = motor.rotate_degrees_treaded(step, 0)
+            thread, _ = motor.rotate_degrees_threaded(step, 0)
             direction *= -1
             print(f"Jittering {jitter_degrees} degrees...")
             thread.join()

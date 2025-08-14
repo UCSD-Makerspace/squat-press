@@ -18,19 +18,6 @@ SENT_GPIO = 18
 MIN_SENT = 2100
 MAX_SENT = 2800
 
-def dispense_pellet_step(motor, step_degrees) -> bool:
-    if motor is None:
-        logging.error("Motor not initialized, cannot dispense pellet")
-        return
-
-    try:
-        thread, _ = motor.rotate_degrees_threaded(step_degrees, 0)
-        thread.join()
-        return True
-    except Exception as e:
-        logging.error(f"Failed to dispense pellet: {e}")
-        return False
-
 def init_hardware(pi, config):
     p, LTC, motor = None, None, None
     
@@ -120,7 +107,6 @@ def main():
                 if new_SENT_data:
                     filtered_SENT = (filtered_SENT * config.ALPHA) + (recent_SENT * (1-config.ALPHA))
                     
-                # use dispense logic here from rotate.py
                 if MIN_SENT <= filtered_SENT <= MAX_SENT:
                     dispense(motor, LTC)
 
