@@ -8,17 +8,22 @@ import Dispenser.TMC2209.tmc2209 as tmc2209
 STEP_DEGREES = 360 / 8 # 8 total steps for 1 revolution (8 holes in the pellet wheel)
 MAX_ROTATION = 45 * 5 # 45 degrees per hole; jitter if after 5 rotations pellet is not dispensed
 ROTATE_COOLDOWN = 1.0 # 1 second cooldown between rotations
-JITTER_DEGREES = 15
-JITTER_AMOUNT = 6
+JITTER_DEGREES = 20
+JITTER_AMOUNT = 8
 
-def rotate_step(motor, step_degrees) -> bool:
+def rotate_step(motor, step_degrees, ltc) -> bool:
     if motor is None:
         logging.error("Motor not initialized, cannot rotate")
         return False
     
     try:
         thread, _ = motor.rotate_degrees_threaded(step_degrees, 0)
-        thread.join()
+        while thread.is_alive():
+            if ltc.get_detected():
+                logging.info("Pellet detected during rotation, stopping motor")
+                motor.stop()
+                return False
+            time.sleep(0.1)
         return True
     except Exception as e:
         logging.error(f"Failed to rotate: {e}")
@@ -35,7 +40,7 @@ def dispense(motor, ltc) -> bool:
             logging.info("Pellet detected during dispense, stopping rotation")
             return True
         
-        if not rotate_step(motor, STEP_DEGREES):
+        if not rotate_step(motor, STEP_DEGREES, ltc):
             return False
 
         TOTAL_ROTATED += STEP_DEGREES
