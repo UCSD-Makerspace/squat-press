@@ -38,6 +38,7 @@ def dispense(motor, ltc) -> bool:
     while TOTAL_ROTATED < MAX_ROTATION:
         if ltc.get_detected():
             logging.info("Pellet detected during dispense, stopping rotation")
+            motor.stop
             return True
         
         if not rotate_step(motor, STEP_DEGREES, ltc):
