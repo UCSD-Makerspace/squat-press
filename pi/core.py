@@ -22,9 +22,7 @@ def dispense_pellet_step(motor, step_degrees) -> bool:
     if motor is None:
         logging.error("Motor not initialized, cannot dispense pellet")
         return
-    
-    # dir = 1
-    # dist = dir * 180
+
     try:
         thread, _ = motor.rotate_degrees_threaded(step_degrees, 0)
         thread.join()
@@ -122,8 +120,9 @@ def main():
                 if new_SENT_data:
                     filtered_SENT = (filtered_SENT * config.ALPHA) + (recent_SENT * (1-config.ALPHA))
                     
-                if filtered_SENT > MIN_SENT or filtered_SENT < MAX_SENT:
-                    dispense(motor)
+                # use dispense logic here from rotate.py
+                if MIN_SENT <= filtered_SENT <= MAX_SENT:
+                    dispense(motor, LTC)
 
                 #print(f"Filtered Data, {filtered_SENT:0.5f}, Current Data, {(recent_SENT if new_SENT_data else 'Old Data')}")
     
