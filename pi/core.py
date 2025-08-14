@@ -108,6 +108,7 @@ def main():
                     filtered_SENT = (filtered_SENT * config.ALPHA) + (recent_SENT * (1-config.ALPHA))
                     
                 if MIN_SENT <= filtered_SENT <= MAX_SENT:
+                    logging.info(f"Lift detected: {filtered_SENT:.2f}")
                     dispense(motor, LTC)
 
                 #print(f"Filtered Data, {filtered_SENT:0.5f}, Current Data, {(recent_SENT if new_SENT_data else 'Old Data')}")
