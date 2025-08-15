@@ -27,7 +27,7 @@ def rotate_step(motor, step_degrees, ltc) -> bool:
                 thread.join(timeout=2.0)
                 waiting_thread.join(timeout=1.0)
                 return False
-            time.sleep(0.01)
+            time.sleep(0.1)
 
         waiting_thread.join()
         return True
@@ -48,6 +48,7 @@ def dispense(motor, ltc) -> bool:
         if ltc.get_detected():
             logging.info("Pellet detected during dispense, stopping rotation")
             motor.stop()
+            time.sleep(0.1)
             return True
         
         if not rotate_step(motor, STEP_DEGREES, ltc):
