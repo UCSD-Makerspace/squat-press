@@ -27,7 +27,7 @@ def rotate_step(motor, step_degrees, ltc) -> bool:
                 thread.join(timeout=2.0)
                 waiting_thread.join(timeout=1.0)
                 return False
-            time.sleep(0.1)
+            time.sleep(0.05)
 
         waiting_thread.join()
         return True
