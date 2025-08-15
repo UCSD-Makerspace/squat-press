@@ -17,28 +17,37 @@ def rotate_step(motor, step_degrees, ltc) -> bool:
         return False
     
     try:
-        thread, _ = motor.rotate_degrees_threaded(step_degrees, 0)
+        thread, waiting_thread = motor.rotate_degrees_threaded(step_degrees, 0)
+
         while thread.is_alive():
+            ltc.update()
             if ltc.get_detected():
                 logging.info("Pellet detected during rotation, stopping motor")
                 motor.stop()
+                thread.join(timeout=2.0)
+                waiting_thread.join(timeout=1.0)
                 return False
-            time.sleep(0.1)
+            time.sleep(0.01)
+
+        waiting_thread.join()
         return True
     except Exception as e:
         logging.error(f"Failed to rotate: {e}")
+        motor.stop()
         return False
     
 def dispense(motor, ltc) -> bool:
     TOTAL_ROTATED = 0
+
     if motor is None:
         logging.error("Motor not intitialized for dispensing")
         return False
     
     while TOTAL_ROTATED < MAX_ROTATION:
+        ltc.update()
         if ltc.get_detected():
             logging.info("Pellet detected during dispense, stopping rotation")
-            motor.stop
+            motor.stop()
             return True
         
         if not rotate_step(motor, STEP_DEGREES, ltc):
@@ -48,8 +57,7 @@ def dispense(motor, ltc) -> bool:
         time.sleep(ROTATE_COOLDOWN)
 
     logging.info("Failed to dispense pellet after 5 rotations, jittering...")
-    jitter(motor, JITTER_DEGREES, JITTER_AMOUNT)
-    return False
+    return jitter(motor, JITTER_DEGREES, JITTER_AMOUNT)
 
 def jitter(motor, jitter_degrees, jitter_amount) -> bool:
     if motor is None:

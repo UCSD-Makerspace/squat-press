@@ -66,6 +66,7 @@ class TMC2209:
         self.mspr = ms_mode.value * spr # Microsteps per revolution
         self._position = start_position
         self._direction = Direction.CLOCKWISE
+        self._should_stop = False
 
         # Set GPIO pins as outputs
         for pin in [self.dir_pin, self.step_pin, self.ms1_pin, self.ms2_pin, self.en_pin]:
@@ -94,6 +95,7 @@ class TMC2209:
 
     def stop(self):
         logging.info("Stopping motor.")
+        self._should_stop = True
         self._disable()
 
     def _enable(self):
@@ -119,13 +121,16 @@ class TMC2209:
         if self._enabled:
             logging.warning("Motor is already enabled. Skipping step.")
             return
+        
         self._enable()
+        self._should_stop = False
 
         # Step the motor the specified number of times
         for _ in range(steps):
-            if not self._enabled:
+            if not self._enabled or self._should_stop:
                 logging.log("Motor has been disabled. Stopping stepping.")
                 break
+
             self.pi.write(self.step_pin, 1)
             sleep(delay)
             self.pi.write(self.step_pin, 0)
