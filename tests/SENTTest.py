@@ -130,9 +130,6 @@ def main():
         new_data = False
         status, data1, data2, ticktime, crc, errors, syncPulse = p.SENTData()
         if errors == 0 or errors == 8:
-            if skip_count < 10:
-                skip_count += 1
-                continue
             most_recent_data = data1
             new_data = True
             time_since_last_data = 0
