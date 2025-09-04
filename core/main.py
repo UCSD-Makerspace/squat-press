@@ -8,7 +8,6 @@ import logging
 from PhaseManager import PhaseManager
 from phases import Warmup, Lift, Cooldown, ProgressiveOverload
 
-from paradigm import TrainingParadigm, Paradigm
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 import ADC.ADC as ADC
@@ -63,7 +62,7 @@ def dispenser_worker(motor, LTC, phase_manager):
     logging.info("Dispenser worker thread started")
 
     while True:
-        current_phase = PhaseManager.get_current_phase()
+        current_phase = phase_manager.get_current_phase()
         if not current_phase:
             logging.warning("Current phase not found in dispenser_thread")
             time.sleep(0.1)
@@ -117,7 +116,7 @@ def main():
             return
 
         dispenser_thread = threading.Thread(
-            target = dispenser_thread,
+            target = dispenser_worker,
             args=(motor, LTC, phase_manager),
             daemon=True
         )
@@ -197,7 +196,7 @@ def main():
 
         if 'dispenser_thread' in locals() and dispenser_thread.is_alive():
             logging.info("Waiting for dispenser thread to finish...")
-            dispenser_worker.join(timeout=5.0)
+            dispenser_thread.join(timeout=5.0)
 
         cleanup_hardware(p, motor, pi)
         final_stats = phase_manager.get_trial_stats()
