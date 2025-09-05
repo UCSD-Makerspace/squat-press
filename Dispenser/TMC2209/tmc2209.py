@@ -128,7 +128,7 @@ class TMC2209:
         # Step the motor the specified number of times
         for _ in range(steps):
             if not self._enabled or self._should_stop:
-                logging.log("Motor has been disabled. Stopping stepping.")
+                logging.info("Motor has been disabled. Stopping stepping.")
                 break
 
             self.pi.write(self.step_pin, 1)

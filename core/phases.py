@@ -2,9 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
 import time
-
-# Values found at the bottom & top of linear induction sensor, respectively
-MIN_SENT, MAX_SENT = 2100, 2800
+import threading
 
 @dataclass
 class PhaseConfig:
@@ -18,6 +16,9 @@ class Phase(ABC):
         self.start_time = None
         self.pellets_dispensed = 0
         self.pellet_queue = 0
+        self.pellets_attempted = 0
+        self.pending_pellets = 0
+        self._lock = threading.Lock()
 
     @abstractmethod
     def should_dispense(self, filtered_sent: float, **kwargs) -> bool:
@@ -30,17 +31,44 @@ class Phase(ABC):
         pass
 
     def start_phase(self):
-        self.start_time = time.time()
-        self.pellets_dispensed = 0
-        self.pellet_queue = 0
+        with self._lock:
+            self.start_time = time.time()
+            self.pellets_dispensed = 0
+            self.pellet_queue = 0
+            self.pellets_attempted = 0
+            self.pending_pellets = 0
     
     def add_to_queue(self):
-        self.pellet_queue += 1
+        with self._lock:
+            self.pellet_queue += 1
 
-    def pellet_dispensed(self):
-        self.pellets_dispensed += 1
-        if self.pellet_queue > 0:
-            self.pellet_queue -= 1
+    def pellet_attempt_started(self):
+        with self._lock:
+            self.pellets_attempted += 1
+            self.pending_pellets += 1
+            if self.pellet_queue > 0:
+                self.pellet_queue -= 1
+
+    def pellet_confirmed_dispensed(self):
+        with self._lock:
+            self.pellets_dispensed += 1
+            if self.pellet_queue > 0:
+                self.pellet_queue -= 1
+            self._on_pellet_dispensed()
+
+    def pellet_attempt_failed(self):
+        with self._lock:
+            if self.pending_pellets > 0:
+                self.pending_pellets -= 1
+
+    def _on_pellet_dispensed(self):
+        pass
+
+    def should_dispense(self, filtered_sent: float, **kwargs) -> bool:
+        pass
+
+    def is_complete(self) -> bool:
+        pass
 
     def _check_common_completion(self):
         """Check common completion criteria (druation/max_pellets)"""

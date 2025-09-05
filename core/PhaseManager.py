@@ -68,7 +68,7 @@ class PhaseManager():
             new_phase = self.advance_to_next_phase()
 
             if hasattr(old_phase, 'pellets_dispensed'):
-                logging.info(f"Phase stats - Pellets dispensed: {old_phase.pellets_dispensed}")
+                logging.info(f"{old_phase} stats - Pellets dispensed: {old_phase.pellets_dispensed}")
 
             return new_phase is not None
         
