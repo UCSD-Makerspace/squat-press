@@ -1,59 +1,54 @@
 import time
 import pigpio
 
-# GPIO pins
-EN = 15   # 1,2 EN
-IN1 = 6   # 1A
-IN2 = 5   # 2A
+# GPIO pin setup
+EN = 15   # Enable
+A1 = 6    # Direction 1
+A2 = 5    # Direction 2
 
-# Initialize pigpio
+# Connect to pigpio daemon
 pi = pigpio.pi()
 if not pi.connected:
-    raise RuntimeError("Could not connect to pigpio daemon. Run 'sudo pigpiod' first.")
+    print("Failed to connect to pigpio daemon")
+    exit()
 
-# Setup pins
+# Set pins as outputs
 pi.set_mode(EN, pigpio.OUTPUT)
-pi.set_mode(IN1, pigpio.OUTPUT)
-pi.set_mode(IN2, pigpio.OUTPUT)
+pi.set_mode(A1, pigpio.OUTPUT)
+pi.set_mode(A2, pigpio.OUTPUT)
 
-# Function to extend actuator
-def extend(duration=2.0, speed=255):
-    pi.write(IN1, 1)
-    pi.write(IN2, 0)
-    pi.set_PWM_dutycycle(EN, speed)
-    time.sleep(duration)
-    stop()
-
-# Function to retract actuator
-def retract(duration=2.0, speed=255):
-    pi.write(IN1, 0)
-    pi.write(IN2, 1)
-    pi.set_PWM_dutycycle(EN, speed)
-    time.sleep(duration)
-    stop()
-
-# Stop actuator
-def stop():
-    pi.set_PWM_dutycycle(EN, 0)
-    pi.write(IN1, 0)
-    pi.write(IN2, 0)
-
-# Main loop for testing
 try:
     while True:
-        cmd = input("Enter command (e=extend, r=retract, s=stop, q=quit): ").lower()
-        if cmd == "e":
-            extend()
-        elif cmd == "r":
-            retract()
-        elif cmd == "s":
-            stop()
-        elif cmd == "q":
-            stop()
-            break
-        else:
-            print("Invalid command!")
+        # Extend actuator
+        print("Extending...")
+        pi.write(A1, 1)
+        pi.write(A2, 0)
+        pi.write(EN, 1)           # Enable motor
+        time.sleep(5)             # Run for 5 seconds
+
+        # Stop actuator
+        print("Stopping...")
+        pi.write(EN, 0)
+        time.sleep(2)
+
+        # Retract actuator
+        print("Retracting...")
+        pi.write(A1, 0)
+        pi.write(A2, 1)
+        pi.write(EN, 1)
+        time.sleep(5)
+
+        # Stop actuator
+        print("Stopping...")
+        pi.write(EN, 0)
+        time.sleep(2)
+
+except KeyboardInterrupt:
+    print("Exiting...")
 
 finally:
-    stop()
+    # Ensure all pins are low
+    pi.write(EN, 0)
+    pi.write(A1, 0)
+    pi.write(A2, 0)
     pi.stop()
