@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 import ADC.ADC as ADC
 import Dispenser.TMC2209.tmc2209 as tmc2209
 from Dispenser.PhotoInterruptor.PhotoInterruptor import PhotoInterruptor
-import lx3302a.SENTReader.SENTReader as SENTReader
+import lx3302a.SENTReader.serial_reader as serial_reader
 from rotate import dispense
 
 #### Consts ####
@@ -27,7 +27,7 @@ def init_hardware(pi, config):
     
     try:
         logging.info("Initializing SENT reader...")
-        p = SENTReader.SENTReader(pi, config.SENT_GPIO)
+        p = serial_reader.serial_reader('COM3', 19200)
         
         logging.info("Initializing photo interruptor...")
         LTC = PhotoInterruptor(pi)
@@ -42,7 +42,7 @@ def init_hardware(pi, config):
         logging.error(f"Failed to initialize hardware components: {e}")
         if p:
             try:
-                p.stop()
+                p.disconnect()
             except:
                 pass
         return None, None, None
@@ -50,7 +50,7 @@ def init_hardware(pi, config):
 def cleanup_hardware(p, motor, pi):
     try:
         if p:
-            p.stop()
+            p.disconnect()
         if motor:
             motor.stop()
         if pi:
@@ -139,9 +139,6 @@ def main():
 
         # Init sensor variables
         last_LTC_state = LTC.get_detected()
-        filtered_SENT = 0.0
-        time_since_last_SENT = 0.0
-        recent_SENT = 0
 
         start = time.time()
         while phase_manager.is_trial_active and (time.time() - start < config.RUN_TIME):
@@ -183,19 +180,16 @@ def main():
             try:                
                 LTC.update()
                 cur_LTC_state = LTC.get_detected()
+                raw_value, raw_response = p.get_position()
 
-                if errors == 0 or errors == 8:
-                    recent_SENT = data1
-                    new_SENT_data = True
-                    time_since_last_SENT = 0.0 
-                else:
-                    time_since_last_SENT += config.SAMPLE_TIME
-                    if time_since_last_SENT > 5.0:
+                if raw_value is not None:
+                    since_last_mm += config.SAMPLE_TIME
+                    if since_last_mm > 5.0:
                         logging.warning("No valid data received for 5 seconds, restarting SENTReader")
                         p.stop()
-                        p = SENTReader.SENTReader(pi, SENT_GPIO)
+                        p = serial_reader.serial_reader('COM3', 19200)
                         time.sleep(3.0)
-                        time_since_last_SENT = 0.0
+                        since_last_mm = 0.0
                         continue
 
                 if new_SENT_data:

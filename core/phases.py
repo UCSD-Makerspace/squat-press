@@ -4,6 +4,8 @@ from typing import Dict, Any, Optional
 import time
 import threading
 
+MIN_MM, MAX_MM = 7.0, 23.0
+
 @dataclass
 class PhaseConfig:
     name: str
@@ -21,7 +23,7 @@ class Phase(ABC):
         self._lock = threading.Lock()
 
     @abstractmethod
-    def should_dispense(self, filtered_sent: float, **kwargs) -> bool:
+    def should_dispense(self, mm_value: float, **kwargs) -> bool:
         """Determine if a pellet should be dispensed based on phase logic"""
         pass
     
@@ -64,7 +66,7 @@ class Phase(ABC):
     def _on_pellet_dispensed(self):
         pass
 
-    def should_dispense(self, filtered_sent: float, **kwargs) -> bool:
+    def should_dispense(self, mm_value: float, **kwargs) -> bool:
         pass
 
     def is_complete(self) -> bool:
@@ -79,39 +81,26 @@ class Phase(ABC):
         return False
 
 class Warmup(Phase):
-    def __init__(self, 
-                 req_lifts: int = 3, 
-                 lift_increment: int = 1,
-                 threshold_range: tuple[float, float] = (MIN_SENT, MAX_SENT), 
-                 duration: Optional[float] = None, 
-                 max_pellets: Optional[int] = None):
-        
-        config = PhaseConfig(
-            name="Warmup",
-            duration=duration,
-            max_pellets=max_pellets
-        )
+    def __init__(self, req_lifts: int = 3, lift_increment: int = 1, **kwargs):
+        config = PhaseConfig(name="Warmup", **kwargs)
         super().__init__(config)
-
         self.req_lifts = req_lifts
         self.lift_increment = lift_increment
-        self.threshold_range = threshold_range
-        self.current_threshold = self.req_lifts
+        self.current_threshold = req_lifts
         self.consecutive_lifts = 0
 
-    def should_dispense(self, filtered_sent: float, **kwargs) -> bool:
-        if not (self.threshold_range[0] <= filtered_sent <= self.threshold_range[1]):
+    def should_dispense(self, mm_value: float, **kwargs) -> bool:
+        if not (MIN_MM <= mm_value <= MAX_MM):
             return False
         
         self.consecutive_lifts += 1
         if self.consecutive_lifts >= self.current_threshold:
             self.consecutive_lifts = 0
             return True
-
         return False
-    
-    def pellet_dispensed(self):
-        super().pellet_dispensed()
+
+    def _on_pellet_dispensed(self):
+        """Increment threshold when pellet is confirmed dispensed"""
         self.current_threshold += self.lift_increment
 
     def is_complete(self) -> bool:
@@ -121,7 +110,7 @@ class Lift(Phase):
     def __init__(self, 
                  req_lifts: int = 10, 
                  lift_increment: int = 5,
-                 threshold_range: tuple[float, float] = (MIN_SENT, MAX_SENT),
+                 threshold_range: tuple[float, float] = (MIN_MM, MAX_MM),
                  duration: float = 60.0, 
                  max_pellets: int = 20):
         
@@ -139,8 +128,8 @@ class Lift(Phase):
         self.threshold_range = threshold_range
         self.consecutive_lifts = 0
 
-    def should_dispense(self, filtered_sent, **kwargs):
-        if not (self.threshold_range[0] <= filtered_sent <= self.threshold_range[1]):
+    def should_dispense(self, mm_value, **kwargs):
+        if not (self.threshold_range[0] <= mm_value <= self.threshold_range[1]):
             return False
 
         self.consecutive_lifts += 1
@@ -173,7 +162,7 @@ class Cooldown(Phase):
         self.pellet_interval = pellet_interval
         self.last_pellet_time = 0
 
-    def should_dispense(self, filtered_sent: float, **kwargs) -> bool:
+    def should_dispense(self, mm_value: float, **kwargs) -> bool:
         current_time = time.time()
         if current_time - self.last_pellet_time >= self.pellet_interval:
             self.last_pellet_time = current_time
@@ -188,7 +177,7 @@ class ProgressiveOverload(Phase):
                  initial_req_lifts: int = 3,
                  max_req_lifts: int = 10,
                  increment_every_n_pellets: int = 3,
-                 threshold_range: tuple[float, float] = (MIN_SENT, MAX_SENT),
+                 threshold_range: tuple[float, float] = (MIN_MM, MAX_MM),
                  duration: float = None,
                  max_pellets: Optional[int] = None):
         
@@ -206,8 +195,8 @@ class ProgressiveOverload(Phase):
         self.current_req_lifts = initial_req_lifts
         self.consecutive_lifts = 0
 
-    def should_dispense(self, filtered_sent, **kwargs) -> bool:
-        if not (self.threshold_range[0] <= filtered_sent <= self.threshold_range[1]):
+    def should_dispense(self, mm_value, **kwargs) -> bool:
+        if not (self.threshold_range[0] <= mm_value <= self.threshold_range[1]):
             return False
         
         self.consecutive_lifts += 1
