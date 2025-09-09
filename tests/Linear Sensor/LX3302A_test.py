@@ -48,7 +48,8 @@ class LinearSensorReader:
         (22.225, 6810),
     ]
 
-    def connect(self) -> bool:
+    def connect(self):
+        """Connect to the sensor"""
         try:
             self.ser = serial.Serial(self.port, self.baudrate, timeout=1)
             print(f"Connected to {self.port} at {self.baudrate} baud")
@@ -58,6 +59,7 @@ class LinearSensorReader:
             return False
 
     def disconnect(self):
+        """Disconnect from sensor"""
         if self.ser and self.ser.is_open:
             self.ser.close()
             print("Disconnected")
@@ -77,19 +79,19 @@ class LinearSensorReader:
             return None
 
     def get_position(self):
+        """Get position reading using 'F' command"""
         response = self.send_command('F')
-
+        
         if response:
             try:
-                hex_part = response.split()[0]
+                hex_part = response.split()[0]  # Get "04A3" part
                 decimal_value = int(hex_part, 16)
-                return self.interpolate(decimal_value)
-            except Exception as e:
-                print(f"Parse error in serial_reader get_position: {e}, raw response = {response}")
-                return None
-        return None
+                return decimal_value, response
+            except:
+                return None, response
+        return None, response
 
-    def interpolate(self, raw_value) -> float:
+    def interpolate(self, raw_value):
         """Interpolate raw sensor value to mm using calibration table"""
         table = self.calibration_table
 
@@ -108,7 +110,63 @@ class LinearSensorReader:
         return None
 
     def get_status(self):
+        """Get status using 'G' command"""
         return self.send_command('G')
 
     def get_device_info(self):
+        """Get device info using 'A' command"""
         return self.send_command('A')
+
+    def continuous_monitoring(self, interval=0.025, filter_window = 5, noise_threshold = 0.06):
+        """Continuously monitor position with smoothing"""
+        self.running = True
+        print("Starting continuous monitoring (Press Ctrl+C to stop)")
+        print("Timestamp\t\tRaw\t\tmm\t\tFull Response")
+        print("-" * 100)
+
+        recent_pos = []
+
+        try:
+            while self.running:
+                raw_value, raw_response = self.get_position()
+                timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+
+                if raw_value is not None:
+                    mm_value = self.interpolate(raw_value)
+                    recent_pos.append(mm_value)
+                    if len(recent_pos) > filter_window:
+                        recent_pos.pop(0)
+
+                    filtered_value = sum(recent_pos) / len(recent_pos)
+                    if abs(mm_value - filtered_value) > noise_threshold:
+                        display_value = filtered_value  
+                    else:
+                        display_value = mm_value
+
+                    print(f"{timestamp}\t{raw_value}\t\t{display_value:.3f} mm\t{raw_response}")
+                else:
+                    print(f"{timestamp}\t{raw_response}\t\t(Parse Error)")
+
+                time.sleep(interval)
+
+        except KeyboardInterrupt:
+            print("\nStopping monitoring...")
+            self.running = False
+
+if __name__ == "__main__":
+    sensor = LinearSensorReader('COM3', 19200)
+
+    if sensor.connect():
+        print("\n=== Testing Commands ===")
+
+        print("Position:", sensor.get_position())
+        print("Status:", sensor.get_status())
+        print("Device Info:", sensor.get_device_info())
+
+        response = input("\nStart continuous monitoring? (y/n): ")
+        if response.lower() == 'y':
+            sensor.continuous_monitoring()
+
+        sensor.disconnect()
+    else:
+        print("Failed to connect to sensor")

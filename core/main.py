@@ -27,7 +27,7 @@ def init_hardware(pi, config):
     
     try:
         logging.info("Initializing SENT reader...")
-        p = serial_reader.serial_reader('COM3', 19200)
+        p = serial_reader.LinearSensorReader('COM3', 115200)
         
         logging.info("Initializing photo interruptor...")
         LTC = PhotoInterruptor(pi)
@@ -61,7 +61,6 @@ def cleanup_hardware(p, motor, pi):
 
 def dispenser_worker(motor, LTC, phase_manager, pellet_event_queue):
     """Modified dispenser worker that communicates attempts"""
-    import queue
     
     logging.info("Dispenser worker thread started")
 
@@ -139,23 +138,38 @@ def main():
 
         # Init sensor variables
         last_LTC_state = LTC.get_detected()
-
         start = time.time()
+        mm_value = None
+        since_last_mm = 0.0
+        last_log_time = 0.0
+
         while phase_manager.is_trial_active and (time.time() - start < config.RUN_TIME):
             current_time = time.time()
+            new_mm = p.get_position()
+
+            if new_mm is not None:
+                mm_value = new_mm
+                since_last_mm = 0.0
+            else:
+                since_last_mm += config.SAMPLE_TIME
+
             time.sleep(config.SAMPLE_TIME)
 
             try:
                 while True:
-                    event = pellet_event_queue.get_nowait()
-                    if event['type'] == 'attempt_result':
-                        if event['success']:
-                            pending_confirmations.append({
-                                'attempt_id': event['attempt_id'],
-                                'timestamp': event['timestamp']
-                            })
-                            logging.info(f"Pellet attempt {event['attempt_id']} succeeded, waiting for LTC confirmation")
-                    pellet_event_queue.task_done()
+                    try:
+                        event = pellet_event_queue.get_nowait()
+                    except queue.Empty:
+                        break
+                    else:
+                        if event['type'] == 'attempt_result':
+                            if event['success']:
+                                pending_confirmations.append({
+                                    'attempt_id': event['attempt_id'],
+                                    'timestamp': event['timestamp']
+                                })
+                                logging.info(f"Pellet attempt {event['attempt_id']} succeeded, waiting for LTC confirmation")
+                        pellet_event_queue.task_done()
             except queue.Empty:
                 pass
 
@@ -174,30 +188,23 @@ def main():
                 if current_time - p['timestamp'] < 10.0
             ]
 
-            status, data1, data2, ticktime, crc, errors, syncPulse = p.SENTData()
-            new_SENT_data = False
-
             try:                
                 LTC.update()
                 cur_LTC_state = LTC.get_detected()
-                raw_value, raw_response = p.get_position()
 
-                if raw_value is not None:
-                    since_last_mm += config.SAMPLE_TIME
-                    if since_last_mm > 5.0:
-                        logging.warning("No valid data received for 5 seconds, restarting SENTReader")
-                        p.stop()
-                        p = serial_reader.serial_reader('COM3', 19200)
-                        time.sleep(3.0)
-                        since_last_mm = 0.0
+                if mm_value is not None and since_last_mm > 5.0:
+                    logging.warning("No valid data received for 5 seconds, restarting SENTReader")
+                    p.disconnect()
+                    p = serial_reader.LinearSensorReader('COM3', 115200)
+                    if not p.connect():
+                        logging.error("Failed to connect LinearSensorReader after restart")
                         continue
+                    time.sleep(3.0)
+                    since_last_mm = 0.0
 
-                if new_SENT_data:
-                    filtered_SENT = (filtered_SENT * config.ALPHA) + (recent_SENT * (1-config.ALPHA))
-                    
                 current_phase = phase_manager.get_current_phase()
                 if current_phase:
-                    if current_phase.should_dispense(filtered_SENT):
+                    if current_phase.should_dispense(mm_value):
                         logging.info(f"Lift threshold met in {current_phase.config.name}")
                         current_phase.add_to_queue()
 
@@ -221,7 +228,8 @@ def main():
 
                 last_LTC_state = cur_LTC_state
 
-                if int(current_time) % 30 == 0:
+                if current_time - last_log_time >= 30.0:
+                    last_log_time = current_time
                     stats = phase_manager.get_trial_stats()
                     if stats['current_phase_stats']:
                         phase_stats = stats['current_phase_stats']
@@ -242,7 +250,7 @@ def main():
         if phase_manager.is_trial_active:
             phase_manager.end_trial()
 
-        if 'dispenser_thread' in locals() and dispenser_thread.is_alive():
+        if dispenser_thread and dispenser_thread.is_alive():
             logging.info("Waiting for dispenser thread to finish...")
             dispenser_thread.join(timeout=5.0)
 
