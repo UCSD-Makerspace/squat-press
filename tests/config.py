@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 @dataclass
 class SystemConfig:
-    SAMPLE_TIME: float = 0.01
+    SAMPLE_TIME: float = 0.2
     RUN_TIME: float = 6000000000.0
     THRESHOLD: float = 0.7
     ALPHA: float = 0.6

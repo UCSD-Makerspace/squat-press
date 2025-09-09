@@ -1,9 +1,6 @@
 import time
 import pigpio
 import logging
-from tests.config import SystemConfig
-
-import Dispenser.TMC2209.tmc2209 as tmc2209
 
 STEP_DEGREES = 360 / 8 # 8 total steps for 1 revolution (8 holes in the pellet wheel)
 MAX_ROTATION = 45 * 5 # 45 degrees per hole; jitter if after 5 rotations pellet is not dispensed
@@ -27,7 +24,7 @@ def rotate_step(motor, step_degrees, ltc) -> bool:
                 thread.join(timeout=2.0)
                 waiting_thread.join(timeout=1.0)
                 return False
-            time.sleep(0.05)
+            time.sleep(0.1)
 
         waiting_thread.join()
         return True
