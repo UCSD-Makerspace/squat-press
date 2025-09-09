@@ -23,24 +23,28 @@ try:
         print("Extending...")
         pi.write(A1, 1)
         pi.write(A2, 0)
-        pi.write(EN, 1)           # Enable motor
-        time.sleep(5)             # Run for 5 seconds
+        # pi.write(EN, 1)           # Enable motor
+        pi.set_PWM_dutycycle(EN, 77)
+        time.sleep(2)             # Run for 5 seconds
 
         # Stop actuator
         print("Stopping...")
-        pi.write(EN, 0)
+        # pi.write(EN, 0)
+        pi.set_PWM_dutycycle(EN, 0)
         time.sleep(2)
 
         # Retract actuator
         print("Retracting...")
         pi.write(A1, 0)
         pi.write(A2, 1)
-        pi.write(EN, 1)
-        time.sleep(5)
+        # pi.write(EN, 1)
+        pi.set_PWM_dutycycle(EN, 77)
+        time.sleep(2)
 
         # Stop actuator
         print("Stopping...")
-        pi.write(EN, 0)
+        # pi.write(EN, 0)
+        pi.set_PWM_dutycycle(EN, 0)
         time.sleep(2)
 
 except KeyboardInterrupt:
