@@ -82,7 +82,7 @@ def dispenser_worker(motor, LTC, phase_manager, pellet_event_queue):
             logging.info("Dispenser worker thread ending")
             break
 
-def init_pi(pi):
+def init_pi():
     pi = pigpio.pi()
     if not pi.connected:
         logging.error("Failed to connect to pigpio daemon")
