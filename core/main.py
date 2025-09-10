@@ -25,6 +25,7 @@ def main():
     pi = None
     p = None
     motor = None
+    dispenser_thread = None
     
     # Temporary: will eventually have GUI To auto-set these settings
     phase_list = [
