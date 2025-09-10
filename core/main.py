@@ -4,7 +4,6 @@ from time import sleep
 from PhaseManager import PhaseManager
 from phases import Warmup, Lift, Cooldown
 import logging
-import pigpio
 import time
 import threading
 import queue
@@ -109,7 +108,7 @@ def main():
                 if mm_value is not None and since_last_mm > 5.0:
                     logging.warning("No valid data received for 5 seconds, restarting SENTReader")
                     p.disconnect()
-                    p = serial_reader.LinearSensorReader('COM3', 115200)
+                    p = serial_reader.LinearSensorReader('/dev/ttyACM0', 115200)
                     if not p.connect():
                         logging.error("Failed to connect LinearSensorReader after restart")
                         continue

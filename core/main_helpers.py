@@ -13,8 +13,10 @@ def init_hardware(pi):
     p, LTC, motor = None, None, None
     
     try:
-        logging.info("Initializing SENT reader...")
-        p = serial_reader.LinearSensorReader('COM3', 115200)
+        logging.info("Initializing linear sensor...")
+        p = serial_reader.LinearSensorReader('/dev/ttyACM0', 115200)
+        if not p.connect():
+            raise Exception("Failed to connect to linear sensor")
         
         logging.info("Initializing photo interruptor...")
         LTC = PhotoInterruptor(pi)
