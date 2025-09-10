@@ -143,6 +143,7 @@ def main():
 
                 if current_time - last_log_time >= 30.0:
                     phase_manager.log_trial_progress(len(pending_confirmations))
+                    last_log_time = current_time
                  
             except Exception as e:
                 logging.error(f"Error in main loop: {e}")
