@@ -17,6 +17,8 @@ pi.set_mode(EN, pigpio.OUTPUT)
 pi.set_mode(A1, pigpio.OUTPUT)
 pi.set_mode(A2, pigpio.OUTPUT)
 
+pi.set_PWM_frequency(EN, 200)
+
 try:
     while True:
         # Extend actuator
@@ -24,7 +26,7 @@ try:
         pi.write(A1, 1)
         pi.write(A2, 0)
         # pi.write(EN, 1)           # Enable motor
-        pi.set_PWM_dutycycle(EN, 77)
+        pi.set_PWM_dutycycle(EN, 200)
         time.sleep(2)             # Run for 5 seconds
 
         # Stop actuator
@@ -38,7 +40,7 @@ try:
         pi.write(A1, 0)
         pi.write(A2, 1)
         # pi.write(EN, 1)
-        pi.set_PWM_dutycycle(EN, 77)
+        pi.set_PWM_dutycycle(EN, 200)
         time.sleep(2)
 
         # Stop actuator

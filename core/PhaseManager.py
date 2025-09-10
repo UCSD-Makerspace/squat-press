@@ -131,5 +131,13 @@ class PhaseManager():
         status = "Active" if self.is_trial_active else "Inactive"
         current = self.current_phase.config.name if self.current_phase else "None"
         return f"PhaseManager(status={status}, current_phase={current}, phases={len(self.phases)})"
-
+    
+    def log_trial_progress(self, pending_count):
+        stats = self.get_trial_stats()
+        if stats['current_phase_stats']:
+            cps = stats['current_phase_stats']
+            logging.info(f"Trial progress: Phase {stats['current_phase_name']}, "
+                        f"Pellets: {cps['pellets_dispensed']}, "
+                        f"Queue: {cps['pellet_queue']}, "
+                        f"Pending confirmations: {pending_count}")
         

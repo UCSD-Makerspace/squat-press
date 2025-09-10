@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from datetime import datetime
 
-# Calibration table (mm, raw)
 calibration_table = [
     (0.000, 10575),
     (0.635, 10495),
@@ -45,15 +44,14 @@ calibration_table = [
     (22.225, 6810),
 ]
 
-# Prepare interpolation function
 raw_vals = [r for _, r in calibration_table]
 mm_vals = [mm for mm, _ in calibration_table]
 interp_func = interp1d(raw_vals, mm_vals, kind='linear', fill_value='extrapolate')
 
-# Sensor config
+### CONFIG ###
 PORT = 'COM3'
 BAUDRATE = 115200
-SAMPLE_INTERVAL = 0.1  # 20 Hz
+SAMPLE_INTERVAL = 0.1
 
 def get_sensor_reading(ser):
     try:
@@ -92,7 +90,6 @@ def main():
                 times.append(time.time() - start_time)
                 positions.append(mm_value)
 
-                # Keep only the last 200 samples for smoother plotting
                 if len(times) > 200:
                     times.pop(0)
                     positions.pop(0)
