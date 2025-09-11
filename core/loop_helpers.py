@@ -84,6 +84,15 @@ def dispenser_worker(motor, LTC, phase_manager, pellet_event_queue):
             logging.info("Dispenser worker thread ending")
             break
 
+def start_dispenser_thread(motor, LTC, phase_manager, pellet_event_queue):
+    dispenser_thread = threading.Thread(
+        target=dispenser_worker,
+        args=(motor, LTC, phase_manager, pellet_event_queue),
+        daemon=True
+    )
+    dispenser_thread.start()
+    return dispenser_thread
+
 def init_pi():
     pi = pigpio.pi()
     if not pi.connected:

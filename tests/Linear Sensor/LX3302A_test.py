@@ -84,7 +84,7 @@ class LinearSensorReader:
         
         if response:
             try:
-                hex_part = response.split()[0]  # Get "04A3" part
+                hex_part = response.split()[0]
                 decimal_value = int(hex_part, 16)
                 return decimal_value, response
             except:

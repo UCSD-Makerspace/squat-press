@@ -17,7 +17,7 @@ import lx3302a.SENTReader.serial_reader as serial_reader
 from rotate import dispense
 
 ### Helper method imports ###
-from main_helpers import init_hardware, cleanup_hardware, init_pi, dispenser_worker, check_all_hardware, check_mm_value
+from loop_helpers import init_hardware, cleanup_hardware, init_pi, dispenser_worker, check_all_hardware, check_mm_value, start_dispenser_thread
 
 def main():
     config = SystemConfig()
@@ -47,19 +47,16 @@ def main():
 
         # Create event queue for communication between threads
         pellet_event_queue = queue.Queue()
-        dispenser_thread = threading.Thread(
-            target = dispenser_worker,
-            args=(motor, LTC, phase_manager, pellet_event_queue),
-            daemon=True
-        )
-        dispenser_thread.start()
 
+        dispenser_thread = start_dispenser_thread(motor, LTC, phase_manager, pellet_event_queue)
+        
         pending_confirmations = []
 
         # Init sensor variables
         last_LTC_state, start, mm_value, since_last_mm, last_log_time = (
             LTC.get_detected(), time.time(), None, 0.0, 0.0
         )
+
         while phase_manager.is_trial_active and (time.time() - start < config.RUN_TIME):
             current_time = time.time()
 
