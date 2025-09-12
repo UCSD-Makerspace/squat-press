@@ -28,7 +28,7 @@ SAMPLE_INTERVAL = 0.1  # seconds
 # ---------------- Helper ---------------- #
 def read_sensor(sensor):
     try:
-        raw = sensor.get_raw_value()  # adjust method name if different
+        raw = sensor.get_position()
         if raw is not None:
             return float(interp_func(raw))
     except:
