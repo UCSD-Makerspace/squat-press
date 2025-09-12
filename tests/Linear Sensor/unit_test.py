@@ -22,37 +22,28 @@ raw_vals = [r for _, r in calibration_table]
 mm_vals = [mm for mm, _ in calibration_table]
 interp_func = interp1d(raw_vals, mm_vals, kind='linear', fill_value='extrapolate')
 
-# ---------------- Config ---------------- #
-SAMPLE_INTERVAL = 0.1  # seconds
+SAMPLE_INTERVAL = 0.1
 
-# ---------------- Helper ---------------- #
 def read_sensor(sensor):
-    try:
-        raw = sensor.get_position()
-        if raw is not None:
-            return float(interp_func(raw))
-    except:
-        pass
+    raw_value, _ = sensor.get_position() 
+    if raw_value is not None:
+        return sensor.interpolate(raw_value)
     return None
 
-# ---------------- Main ---------------- #
+
 def main():
-    # Motor setup
     motor = tmc2209.TMC2209()
     motor.set_microstepping_mode(tmc2209.MicrosteppingMode.SIXTYFOURTH)
 
-    # Sensor setup
     sensor = serial_reader.LinearSensorReader("/dev/ttyACM0", 115200)
     if not sensor.connect():
         raise Exception("Failed to connect to linear sensor")
 
-    # CSV logging setup
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_file = open(f"sensor_log_{timestamp}.csv", "w", newline="")
     csv_writer = csv.writer(csv_file)
     csv_writer.writerow(["time_s", "position_mm"])
 
-    # Plot setup
     plt.ion()
     fig, ax = plt.subplots(figsize=(10, 6))
     times, positions = [], []
@@ -73,11 +64,8 @@ def main():
         while True:
             dir = -dir
             thread, _ = motor.rotate_degrees_threaded(dir * steps_per_2_5cm, 0)
-            # print(f"Rotating {dir * steps_per_2_5cm} degrees...")
             thread.join()
-            print(f"Rotation complete. Motor position: {motor.position:.2f} revs")
 
-            # During pause, record sensor for ~1s
             for _ in range(int(1 / SAMPLE_INTERVAL)):
                 mm_value = read_sensor(sensor)
                 if mm_value is not None:
@@ -101,7 +89,7 @@ def main():
 
     except KeyboardInterrupt:
         print("\nStopped by user")
-    finally:
+    finally:    
         csv_file.close()
         plot_filename = f"sensor_plot_{timestamp}.png"
         fig.savefig(plot_filename)
