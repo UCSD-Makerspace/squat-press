@@ -1,10 +1,11 @@
-import Dispenser.TMC2209.tmc2209 as tmc2209
-import lx3302a.SENTReader.serial_reader as serial_reader
+import serial
+import time
+import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
-from time import sleep, time
+from datetime import datetime
+import csv
 
-### Calibration table ###
 calibration_table = [
     (0.000, 10575), (0.635, 10495), (1.270, 10420), (1.905, 10335),
     (2.540, 10245), (3.175, 10155), (3.810, 10055), (4.445, 9950),
@@ -19,70 +20,91 @@ calibration_table = [
 
 raw_vals = [r for _, r in calibration_table]
 mm_vals = [mm for mm, _ in calibration_table]
-interp_func = interp1d(raw_vals, mm_vals, kind="linear", fill_value="extrapolate")
+interp_func = interp1d(raw_vals, mm_vals, kind='linear', fill_value='extrapolate')
 
+### CONFIG ###
+PORT = '/dev/ttyACM0'
+BAUDRATE = 115200
 SAMPLE_INTERVAL = 0.1
 
+def get_sensor_reading(ser):
+    try:
+        ser.write('F'.encode('ascii'))
+        response = ser.readline().decode('ascii').strip()
+        if response:
+            hex_part = response.split()[0]
+            return int(hex_part, 16)
+    except Exception:
+        return None
+    return None
+
 def main():
-    # Motor setup
-    motor = tmc2209.TMC2209()
-    motor.set_microstepping_mode(tmc2209.MicrosteppingMode.SIXTYFOURTH)
+    try:
+        ser = serial.Serial(PORT, BAUDRATE, timeout=1)
+        print(f"Connected to {PORT} at {BAUDRATE} baud")
+    except Exception as e:
+        print(f"Failed to connect: {e}")
+        return
 
-    # Sensor setup
-    p = serial_reader.LinearSensorReader("/dev/ttyACM0", 115200)
-    if not p.connect():
-        raise Exception("Failed to connect to linear sensor")
+    # Setup CSV logging
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"sensor_log_{timestamp}.csv"
+    csv_file = open(filename, "w", newline="")
+    csv_writer = csv.writer(csv_file)
+    csv_writer.writerow(["time_s", "position_mm"])  # header
+    print(f"Logging data to {filename}")
 
-    # Plot setup
+    # Setup live plot
     plt.ion()
     fig, ax = plt.subplots(figsize=(10, 6))
     times, positions = [], []
-    line, = ax.plot([], [], "b-", lw=2)
+    line, = ax.plot([], [], 'b-', lw=2)
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Position (mm)")
-    ax.set_title("Real-Time Linear Sensor Reading During Motor Motion")
+    ax.set_title("Real-Time Linear Sensor Reading")
     ax.grid(True)
 
-    start_time = time()
-    dir = 1
-
+    start_time = time.time()
     try:
         while True:
-            # Move motor
-            dir = -dir
-            dist = dir * 910
-            thread, _ = motor.rotate_degrees_threaded(dist, 0)
-            print(f"Rotating {dist} degrees...")
-            thread.join()
-            print("Rotation complete.")
-            print(f"Current position: {motor.position:.2f} revolutions")
+            raw = get_sensor_reading(ser)
+            if raw is not None:
+                mm_value = float(interp_func(raw))
+                elapsed = time.time() - start_time
 
-            # Gather sensor data during each pause
-            for _ in range(int(1 / SAMPLE_INTERVAL)):  # sample for ~1s
-                raw = p.get_raw_value()  # Replace with actual method name if different
-                if raw is not None:
-                    mm_value = float(interp_func(raw))
-                    times.append(time() - start_time)
-                    positions.append(mm_value)
+                times.append(elapsed)
+                positions.append(mm_value)
 
-                    if len(times) > 200:
-                        times.pop(0)
-                        positions.pop(0)
+                # Write to CSV
+                csv_writer.writerow([elapsed, mm_value])
+                csv_file.flush()
 
-                    line.set_xdata(times)
-                    line.set_ydata(positions)
-                    ax.relim()
-                    ax.autoscale_view()
-                    plt.pause(0.01)
-                else:
-                    print("Warning: Failed to read sensor")
-                sleep(SAMPLE_INTERVAL)
+                # Keep plot buffer small
+                if len(times) > 200:
+                    times.pop(0)
+                    positions.pop(0)
+
+                line.set_xdata(times)
+                line.set_ydata(positions)
+                ax.relim()
+                ax.autoscale_view()
+                plt.pause(0.01)
+            else:
+                print("Warning: Failed to read sensor")
+
+            time.sleep(SAMPLE_INTERVAL)
 
     except KeyboardInterrupt:
         print("\nStopped by user")
     finally:
+        csv_file.close()
+        ser.close()
+        plot_filename = f"sensor_plot_{timestamp}.png"
+        fig.savefig(plot_filename)
+        print(f"Plot saved to {plot_filename}")
         plt.ioff()
         plt.show()
+        print(f"Data saved to {filename}")
 
 if __name__ == "__main__":
     main()
