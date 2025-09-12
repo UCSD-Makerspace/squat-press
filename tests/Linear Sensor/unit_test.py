@@ -25,7 +25,7 @@ interp_func = interp1d(raw_vals, mm_vals, kind='linear', fill_value='extrapolate
 SAMPLE_INTERVAL = 0.1
 
 def read_sensor(sensor):
-    raw_value, _ = sensor.get_position() 
+    raw_value = sensor.get_position() 
     if raw_value is not None:
         return sensor.interpolate(raw_value)
     return None
