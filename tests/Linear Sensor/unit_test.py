@@ -8,15 +8,13 @@ import csv
 SAMPLE_INTERVAL = 0.1  # seconds
 STEPS_PER_2_5CM = 915  # steps for 2.5cm motion
 
-def read_sensor(sensor):
-    pos = sensor.get_position()
-    if isinstance(pos, tuple):
-        raw_value, _ = pos
+# mimic your main loop helper
+def check_mm_value(sensor, mm_value, since_last_mm):
+    new_mm = sensor.get_position()
+    if new_mm is not None:
+        return new_mm, 0.0
     else:
-        raw_value = pos
-    if raw_value is not None:
-        return sensor.interpolate(raw_value)
-    return None
+        return mm_value, since_last_mm + SAMPLE_INTERVAL
 
 def main():
     # Motor setup
@@ -45,16 +43,21 @@ def main():
     ax.grid(True)
     start_time = time.time()
 
+    # Initialize variables as in your main integration loop
+    mm_value = None
+    since_last_mm = 0.0
     dir = -1
+
     try:
         while True:
             dir = -dir
             thread, _ = motor.rotate_degrees_threaded(dir * STEPS_PER_2_5CM, 0)
             thread.join()
 
-            # Record sensor for ~1 second
+            # During pause, record sensor for ~1s
             for _ in range(int(1 / SAMPLE_INTERVAL)):
-                mm_value = read_sensor(sensor)
+                mm_value, since_last_mm = check_mm_value(sensor, mm_value, since_last_mm)
+
                 if mm_value is not None:
                     elapsed = time.time() - start_time
                     times.append(elapsed)
@@ -79,7 +82,6 @@ def main():
         print("\nStopped by user")
 
     finally:
-        # Close CSV
         csv_file.close()
 
         # Save live plot (last ~200 points)
@@ -99,6 +101,7 @@ def main():
         ax_full.grid(True)
         plot_filename_full = f"full_sensor_plot_{timestamp}.png"
         fig_full.savefig(plot_filename_full)
+
         plt.ioff()
         plt.show()
 
