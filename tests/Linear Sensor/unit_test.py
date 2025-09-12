@@ -10,11 +10,17 @@ STEPS_PER_2_5CM = 915  # steps for 2.5cm motion
 
 # mimic your main loop helper
 def check_mm_value(sensor, mm_value, since_last_mm):
-    new_mm = sensor.get_position()
-    if new_mm is not None:
-        return new_mm, 0.0
-    else:
-        return mm_value, since_last_mm + SAMPLE_INTERVAL
+    """Return (interpolated mm, since_last_mm, raw decimal value)"""
+    raw_val = sensor.send_command('F')
+    if raw_val:
+        try:
+            # Convert hex string to decimal
+            decimal_value = int(raw_val.split()[0], 16)
+            mm = sensor.interpolate(decimal_value)
+            return mm, 0.0, decimal_value
+        except Exception as e:
+            print(f"Parse error: {e}, raw={raw_val}")
+    return mm_value, since_last_mm + SAMPLE_INTERVAL, None
 
 def main():
     # Motor setup
@@ -30,7 +36,7 @@ def main():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_file = open(f"sensor_log_{timestamp}.csv", "w", newline="")
     csv_writer = csv.writer(csv_file)
-    csv_writer.writerow(["time_s", "position_mm"])
+    csv_writer.writerow(["time_s", "position_mm", "raw_value"])
 
     # Live plot setup
     plt.ion()
@@ -43,7 +49,6 @@ def main():
     ax.grid(True)
     start_time = time.time()
 
-    # Initialize variables as in your main integration loop
     mm_value = None
     since_last_mm = 0.0
     dir = -1
@@ -56,15 +61,15 @@ def main():
 
             # During pause, record sensor for ~1s
             for _ in range(int(1 / SAMPLE_INTERVAL)):
-                mm_value, since_last_mm = check_mm_value(sensor, mm_value, since_last_mm)
+                mm_value, since_last_mm, raw_val = check_mm_value(sensor, mm_value, since_last_mm)
 
                 if mm_value is not None:
                     elapsed = time.time() - start_time
                     times.append(elapsed)
                     positions.append(mm_value)
 
-                    # Write full-resolution CSV
-                    csv_writer.writerow([elapsed, mm_value])
+                    # Write full-resolution CSV with raw value
+                    csv_writer.writerow([elapsed, mm_value, raw_val])
                     csv_file.flush()
 
                     # Live plot: keep only last 200 points
