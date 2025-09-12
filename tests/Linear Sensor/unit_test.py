@@ -72,7 +72,7 @@ def main():
     try:
         while True:
             dir = -dir
-            thread, _ = motor.rotate_degrees_threaded(steps_per_2_5cm, 0)
+            thread, _ = motor.rotate_degrees_threaded(dir * steps_per_2_5cm, 0)
             # print(f"Rotating {dir * steps_per_2_5cm} degrees...")
             thread.join()
             print(f"Rotation complete. Motor position: {motor.position:.2f} revs")
