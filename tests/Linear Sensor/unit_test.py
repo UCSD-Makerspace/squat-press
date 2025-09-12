@@ -67,15 +67,13 @@ def main():
     # Compute steps for 2.5cm based on your calibration: adjust as needed
     # Example: dist_degrees = 2.5cm / 139.75mm * 10000steps -> convert to degrees for motor
     steps_per_2_5cm = 915 # Found from calibration (this is in steps)  
-    degrees_per_step = 360 / (motor.spr * motor.ms_mode.value)
-    dist_degrees = steps_per_2_5cm * degrees_per_step
 
     dir = -1
     try:
         while True:
             dir = -dir
-            thread, _ = motor.rotate_degrees_threaded(dir * dist_degrees, 0)
-            print(f"Rotating {dir * dist_degrees} degrees...")
+            thread, _ = motor.rotate_degrees_threaded(steps_per_2_5cm, 0)
+            # print(f"Rotating {dir * steps_per_2_5cm} degrees...")
             thread.join()
             print(f"Rotation complete. Motor position: {motor.position:.2f} revs")
 
