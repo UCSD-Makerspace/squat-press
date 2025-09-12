@@ -9,9 +9,11 @@ SAMPLE_INTERVAL = 0.1  # seconds
 STEPS_PER_2_5CM = 915  # steps for 2.5cm motion
 
 def read_sensor(sensor):
-    raw_value = sensor.get_position() 
+    raw_value, resp = sensor.get_position()
     if raw_value is not None:
-        return sensor.interpolate(raw_value)
+        mm = sensor.interpolate(raw_value)
+        print(f"Raw: {raw_value}, mm: {mm}")
+        return mm
     return None
 
 def main():
