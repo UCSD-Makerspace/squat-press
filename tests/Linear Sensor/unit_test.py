@@ -50,8 +50,12 @@ def main():
 
     try:
         while True:
-            dir = -dir
+            # dir = -dir
             # thread, _ = motor.rotate_degrees_threaded(dir * STEPS_PER_2_5CM, 0)
+            current_direction = (tmc2209.Direction.CLOCKWISE 
+                               if current_direction == tmc2209.Direction.COUNTERCLOCKWISE 
+                               else tmc2209.Direction.COUNTERCLOCKWISE)
+            motor.set_direction(current_direction)
             motor.step_waveform(steps=STEPS_PER_2_5CM, freq=5000)
             # thread.join()
 
