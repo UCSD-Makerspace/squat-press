@@ -23,8 +23,7 @@ def check_mm_value(sensor, mm_value, since_last_mm):
 def main():
     motor = tmc2209.TMC2209()
     # motor.set_microstepping_mode(tmc2209.MicrosteppingMode.SIXTYFOURTH)
-    motor.set_direction(tmc2209.Direction.COUNTERCLOCKWISE)
-
+    
     sensor = serial_reader.LinearSensorReader("/dev/ttyACM0", 115200)
     if not sensor.connect():
         raise Exception("Failed to connect to linear sensor")
@@ -46,18 +45,17 @@ def main():
 
     mm_value = None
     since_last_mm = 0.0
-    dir = -1
+    current_direction = tmc2209.Direction.CLOCKWISE
 
     try:
         while True:
-            # dir = -dir
-            # thread, _ = motor.rotate_degrees_threaded(dir * STEPS_PER_2_5CM, 0)
-            current_direction = (tmc2209.Direction.CLOCKWISE 
-                               if current_direction == tmc2209.Direction.COUNTERCLOCKWISE 
-                               else tmc2209.Direction.COUNTERCLOCKWISE)
+            if current_direction == tmc2209.Direction.COUNTERCLOCKWISE:
+                current_direction = tmc2209.Direction.CLOCKWISE
+            else:
+                current_direction = tmc2209.Direction.COUNTERCLOCKWISE
+            
             motor.set_direction(current_direction)
             motor.step_waveform(steps=STEPS_PER_2_5CM, freq=5000)
-            # thread.join()
 
             # During pause, record sensor for ~1s
             for _ in range(int(1 / SAMPLE_INTERVAL)):
