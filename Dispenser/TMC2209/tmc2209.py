@@ -2,6 +2,7 @@
 # import dispenser.TMC2209.TMC2209 as TMC2209
 
 import pigpio
+import time
 from time import sleep
 from enum import Enum
 from typing import Tuple
@@ -71,7 +72,8 @@ class TMC2209:
         # Set GPIO pins as outputs
         for pin in [self.dir_pin, self.step_pin, self.ms1_pin, self.ms2_pin, self.en_pin]:
             if pin != 0: # disabled pins should not be set as input
-                self.pi.set_mode(pin, pigpio.INPUT)
+                # self.pi.set_mode(pin, pigpio.INPUT)
+                self.pi.set_mode(pin, pigpio.OUTPUT)
 
     def set_direction(self, direction: Direction):
         """Set the direction of the motor."""
@@ -137,7 +139,9 @@ class TMC2209:
             sleep(delay)
 
             # Keep track of the position
-            self._position += (1 / self.mspr) * (self._direction.sign)
+            # self._position += (1 / self.mspr) * (self._direction.sign)
+            self._position += (steps / self.mspr) * self._direction.sign
+
 
         self._disable()
 
@@ -185,6 +189,35 @@ class TMC2209:
             return
         self.set_direction(Direction.CLOCKWISE if degrees < 0 else Direction.COUNTERCLOCKWISE)
         return self.step_threaded(int(abs(degrees) * self.mspr / 360), delay)
+
+    def step_waveform(self, steps: int, freq: int = 1000):
+        """
+        Generate a precise step pulse train with pigpio waveforms.
+        Args:
+            steps (int): number of steps to issue
+            freq (int): step frequency in Hz
+        """
+        self._enable()
+
+        # Pulse width in microseconds (half-period)
+        period_us = int(1e6 / freq)
+        pulses = []
+
+        for _ in range(steps):
+            pulses.append(pigpio.pulse(1 << self.step_pin, 0, period_us))
+            pulses.append(pigpio.pulse(0, 1 << self.step_pin, period_us))
+
+        self.pi.wave_clear()
+        self.pi.wave_add_generic(pulses)
+        wid = self.pi.wave_create()
+        if wid >= 0:
+            self.pi.wave_send_once(wid)
+            while self.pi.wave_tx_busy():
+                time.sleep(0.001)
+            self.pi.wave_delete(wid)
+
+        self._disable()
+
 
     def __del__(self):
         self.cleanup()

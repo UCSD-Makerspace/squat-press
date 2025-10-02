@@ -5,16 +5,14 @@ from datetime import datetime
 import time
 import csv
 
-SAMPLE_INTERVAL = 0.1  # seconds
+SAMPLE_INTERVAL = 0.1
 STEPS_PER_2_5CM = 915  # steps for 2.5cm motion
 
-# mimic your main loop helper
 def check_mm_value(sensor, mm_value, since_last_mm):
     """Return (interpolated mm, since_last_mm, raw decimal value)"""
     raw_val = sensor.send_command('F')
     if raw_val:
         try:
-            # Convert hex string to decimal
             decimal_value = int(raw_val.split()[0], 16)
             mm = sensor.interpolate(decimal_value)
             return mm, 0.0, decimal_value
@@ -23,22 +21,19 @@ def check_mm_value(sensor, mm_value, since_last_mm):
     return mm_value, since_last_mm + SAMPLE_INTERVAL, None
 
 def main():
-    # Motor setup
     motor = tmc2209.TMC2209()
-    motor.set_microstepping_mode(tmc2209.MicrosteppingMode.SIXTYFOURTH)
+    # motor.set_microstepping_mode(tmc2209.MicrosteppingMode.SIXTYFOURTH)
+    motor.set_direction(tmc2209.Direction.COUNTERCLOCKWISE)
 
-    # Sensor setup
     sensor = serial_reader.LinearSensorReader("/dev/ttyACM0", 115200)
     if not sensor.connect():
         raise Exception("Failed to connect to linear sensor")
 
-    # CSV setup
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_file = open(f"sensor_log_{timestamp}.csv", "w", newline="")
     csv_writer = csv.writer(csv_file)
     csv_writer.writerow(["time_s", "position_mm", "raw_value"])
 
-    # Live plot setup
     plt.ion()
     fig, ax = plt.subplots(figsize=(10, 6))
     times, positions = [], []
@@ -56,8 +51,9 @@ def main():
     try:
         while True:
             dir = -dir
-            thread, _ = motor.rotate_degrees_threaded(dir * STEPS_PER_2_5CM, 0)
-            thread.join()
+            # thread, _ = motor.rotate_degrees_threaded(dir * STEPS_PER_2_5CM, 0)
+            motor.step_waveform(steps=915, freq=5000)
+            # thread.join()
 
             # During pause, record sensor for ~1s
             for _ in range(int(1 / SAMPLE_INTERVAL)):
