@@ -139,9 +139,7 @@ class TMC2209:
             sleep(delay)
 
             # Keep track of the position
-            # self._position += (1 / self.mspr) * (self._direction.sign)
-            self._position += (steps / self.mspr) * self._direction.sign
-
+            self._position += (1 / self.mspr) * (self._direction.sign)
 
         self._disable()
 
@@ -190,7 +188,7 @@ class TMC2209:
         self.set_direction(Direction.CLOCKWISE if degrees < 0 else Direction.COUNTERCLOCKWISE)
         return self.step_threaded(int(abs(degrees) * self.mspr / 360), delay)
 
-    def step_waveform(self, steps: int, freq: int = 1000):
+    def step_waveform(self, steps: float, freq: int = 1000):
         """
         Generate a precise step pulse train with pigpio waveforms.
         Args:
@@ -198,6 +196,7 @@ class TMC2209:
             freq (int): step frequency in Hz
         """
         self._enable()
+        self.pi.write(self.dir_pin, self._direction.value)
 
         # Pulse width in microseconds (half-period)
         period_us = int(1e6 / freq)
@@ -216,6 +215,7 @@ class TMC2209:
                 time.sleep(0.001)
             self.pi.wave_delete(wid)
 
+        self._position += (steps / self.mspr) * self._direction.sign
         self._disable()
 
 
