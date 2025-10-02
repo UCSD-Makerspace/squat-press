@@ -188,7 +188,7 @@ class TMC2209:
         self.set_direction(Direction.CLOCKWISE if degrees < 0 else Direction.COUNTERCLOCKWISE)
         return self.step_threaded(int(abs(degrees) * self.mspr / 360), delay)
 
-    def step_waveform(self, steps: int, freq: int = 1000):
+    def step_waveform(self, steps: int, freq: int):
         """
         Generate a precise step pulse train with pigpio waveforms.
         Breaks large step counts into chunks to avoid waveform buffer limits.
