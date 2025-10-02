@@ -6,7 +6,7 @@ import time
 import csv
 
 SAMPLE_INTERVAL = 0.1
-STEPS_PER_2_5CM = 915
+STEPS_PER_2_5CM = 8250
 
 def check_mm_value(sensor, mm_value, since_last_mm):
     """Return (interpolated mm, since_last_mm, raw decimal value)"""
@@ -55,7 +55,7 @@ def main():
                 current_direction = tmc2209.Direction.COUNTERCLOCKWISE
             
             motor.set_direction(current_direction)
-            motor.step_waveform(steps=STEPS_PER_2_5CM, freq=5000)
+            motor.step_waveform(steps=STEPS_PER_2_5CM, freq=15000)
 
             # During pause, record sensor for ~1s
             for _ in range(int(1 / SAMPLE_INTERVAL)):
