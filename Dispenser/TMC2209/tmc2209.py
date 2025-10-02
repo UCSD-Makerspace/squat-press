@@ -188,7 +188,7 @@ class TMC2209:
         self.set_direction(Direction.CLOCKWISE if degrees < 0 else Direction.COUNTERCLOCKWISE)
         return self.step_threaded(int(abs(degrees) * self.mspr / 360), delay)
 
-    def step_waveform(self, steps: float, freq: int = 1000):
+    def step_waveform(self, steps: int, freq: int = 1000):
         """
         Generate a precise step pulse train with pigpio waveforms.
         Args:
@@ -199,12 +199,12 @@ class TMC2209:
         self.pi.write(self.dir_pin, self._direction.value)
 
         # Pulse width in microseconds (half-period)
-        period_us = int(1e6 / freq)
+        half_period_us = 1e6 / (2 * freq)
         pulses = []
 
         for _ in range(steps):
-            pulses.append(pigpio.pulse(1 << self.step_pin, 0, period_us))
-            pulses.append(pigpio.pulse(0, 1 << self.step_pin, period_us))
+            pulses.append(pigpio.pulse(1 << self.step_pin, 0, half_period_us))
+            pulses.append(pigpio.pulse(0, 1 << self.step_pin, half_period_us))
 
         self.pi.wave_clear()
         self.pi.wave_add_generic(pulses)
