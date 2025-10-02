@@ -6,7 +6,7 @@ import time
 import csv
 
 SAMPLE_INTERVAL = 0.1
-STEPS_PER_2_5CM = 915  # steps for 2.5cm motion
+STEPS_PER_2_5CM = (915 (64/16))  # steps for 2.5cm motion
 
 def check_mm_value(sensor, mm_value, since_last_mm):
     """Return (interpolated mm, since_last_mm, raw decimal value)"""
@@ -52,7 +52,7 @@ def main():
         while True:
             dir = -dir
             # thread, _ = motor.rotate_degrees_threaded(dir * STEPS_PER_2_5CM, 0)
-            motor.step_waveform(steps=915, freq=5000)
+            motor.step_waveform(steps=STEPS_PER_2_5CM, freq=5000)
             # thread.join()
 
             # During pause, record sensor for ~1s
