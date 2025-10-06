@@ -2,17 +2,24 @@ from os import path
 from tests.config import SystemConfig
 from time import sleep
 from PhaseManager import PhaseManager
+<<<<<<< HEAD
 from phases import Warmup, Lift, Cooldown, ProgressiveOverload
 import logging
 import pigpio
+=======
+from phases import Warmup, Lift, Cooldown
+import logging
+>>>>>>> dev
 import time
 import threading
 import queue
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
+### Hardware imports ###
 import ADC.ADC as ADC
 import Dispenser.TMC2209.tmc2209 as tmc2209
+<<<<<<< HEAD
 from Dispenser.PhotoInterruptor.PhotoInterruptor import PhotoInterruptor
 import lx3302a.SENTReader.serial_reader as serial_reader
 from rotate import dispense
@@ -58,6 +65,13 @@ def cleanup_hardware(p, motor, pi):
         logging.info("Hardware cleanup completed")
     except Exception as e:
         logging.error(f"Error during cleanup: {e}")
+=======
+import lx3302a.SENTReader.serial_reader as serial_reader
+from rotate import dispense
+
+### Helper method imports ###
+from loop_helpers import init_hardware, cleanup_hardware, init_pi, dispenser_worker, check_all_hardware, check_mm_value, start_dispenser_thread
+>>>>>>> dev
 
 def dispenser_worker(motor, LTC, phase_manager, pellet_event_queue):
     """Modified dispenser worker that communicates attempts"""
@@ -100,6 +114,7 @@ def main():
     pi = None
     p = None
     motor = None
+    dispenser_thread = None
     
     # Temporary: will eventually have GUI To auto-set these settings
     phase_list = [
@@ -111,6 +126,7 @@ def main():
     phase_manager = PhaseManager(phase_list)
 
     try:
+<<<<<<< HEAD
         pi = pigpio.pi()
         if not pi.connected:
             logging.error("Failed to connect to pigpio daemon")
@@ -121,12 +137,20 @@ def main():
             logging.error("Hardware initialization failed. Exiting.")
             return
         
+=======
+        pi = init_pi()
+        p, LTC, motor = init_hardware(pi)
+        check_all_hardware(pi, LTC, motor)
+        phase_manager.start_trial()
+
+>>>>>>> dev
         if not phase_manager.start_trial():
             logging.error("Failed to start trial: no phases available")
             return
 
         # Create event queue for communication between threads
         pellet_event_queue = queue.Queue()
+<<<<<<< HEAD
         dispenser_thread = threading.Thread(
             target = dispenser_worker,
             args=(motor, LTC, phase_manager, pellet_event_queue),
@@ -152,6 +176,23 @@ def main():
                 since_last_mm = 0.0
             else:
                 since_last_mm += config.SAMPLE_TIME
+=======
+
+        dispenser_thread = start_dispenser_thread(motor, LTC, phase_manager, pellet_event_queue)
+        
+        pending_confirmations = []
+
+        # Init sensor variables
+        last_LTC_state, start, mm_value, since_last_mm, last_log_time = (
+            LTC.get_detected(), time.time(), None, 0.0, 0.0
+        )
+
+        while phase_manager.is_trial_active and (time.time() - start < config.RUN_TIME):
+            current_time = time.time()
+
+            mm_value, since_last_mm = check_mm_value(p, mm_value, since_last_mm, config)
+
+>>>>>>> dev
 
             time.sleep(config.SAMPLE_TIME)
 
@@ -195,7 +236,11 @@ def main():
                 if mm_value is not None and since_last_mm > 5.0:
                     logging.warning("No valid data received for 5 seconds, restarting SENTReader")
                     p.disconnect()
+<<<<<<< HEAD
                     p = serial_reader.LinearSensorReader('COM3', 115200)
+=======
+                    p = serial_reader.LinearSensorReader('/dev/ttyACM0', 115200)
+>>>>>>> dev
                     if not p.connect():
                         logging.error("Failed to connect LinearSensorReader after restart")
                         continue
@@ -229,6 +274,7 @@ def main():
                 last_LTC_state = cur_LTC_state
 
                 if current_time - last_log_time >= 30.0:
+<<<<<<< HEAD
                     last_log_time = current_time
                     stats = phase_manager.get_trial_stats()
                     if stats['current_phase_stats']:
@@ -237,6 +283,10 @@ def main():
                                      f"Pellets: {phase_stats['pellets_dispensed']}, "
                                      f"Queue: {phase_stats['pellet_queue']}, "
                                      f"Pending confirmations: {len(pending_confirmations)}")
+=======
+                    phase_manager.log_trial_progress(len(pending_confirmations))
+                    last_log_time = current_time
+>>>>>>> dev
                  
             except Exception as e:
                 logging.error(f"Error in main loop: {e}")

@@ -90,6 +90,11 @@ class Warmup(Phase):
         self.consecutive_lifts = 0
 
     def should_dispense(self, mm_value: float, **kwargs) -> bool:
+<<<<<<< HEAD
+=======
+        if mm_value is None:
+            return False
+>>>>>>> dev
         if not (MIN_MM <= mm_value <= MAX_MM):
             return False
         
@@ -129,6 +134,11 @@ class Lift(Phase):
         self.consecutive_lifts = 0
 
     def should_dispense(self, mm_value, **kwargs):
+<<<<<<< HEAD
+=======
+        if mm_value is None:
+            return False
+>>>>>>> dev
         if not (self.threshold_range[0] <= mm_value <= self.threshold_range[1]):
             return False
 
@@ -163,6 +173,11 @@ class Cooldown(Phase):
         self.last_pellet_time = 0
 
     def should_dispense(self, mm_value: float, **kwargs) -> bool:
+<<<<<<< HEAD
+=======
+        if mm_value is None:
+            return False
+>>>>>>> dev
         current_time = time.time()
         if current_time - self.last_pellet_time >= self.pellet_interval:
             self.last_pellet_time = current_time
