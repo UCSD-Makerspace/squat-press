@@ -187,6 +187,40 @@ class TMC2209:
             return
         self.set_direction(Direction.CLOCKWISE if degrees < 0 else Direction.COUNTERCLOCKWISE)
         return self.step_threaded(int(abs(degrees) * self.mspr / 360), delay)
+    
+    def step_ramped(self, steps: int, max_steps_per_ms: float, accel_steps_per_ms: float, decel_steps_per_ms: float):
+        """
+        Step following a trapezoidal profile.
+        """
+        steps_stepped: int = 0
+
+        max_ms_per_step = 50 # 20 steps per second, very slow
+        ms_per_step = 50 # very slow
+        min_ms_per_step = 1 / max_steps_per_ms
+        accel_rate = 1 / accel_steps_per_ms
+        decel_rate = 1 / decel_steps_per_ms
+
+        # Accelerate for an amount of time proportional to how fast the deceleration is (so we dont accelerate too much)
+        while steps_stepped < steps * (decel_steps_per_ms / (accel_steps_per_ms + decel_steps_per_ms)):
+            # accelerate
+            if ms_per_step > min_ms_per_step:
+                ms_per_step -= accel_rate 
+            
+            steps_this_cycle = 1 // ms_per_step
+            self.step(steps_this_cycle, delay=ms_per_step / 2)
+            steps_stepped += steps_this_cycle
+
+        while steps_stepped < steps - 5: # make sure the last 5 steps are slow
+            # decelerate
+            if ms_per_step < max_ms_per_step:
+                ms_per_step += decel_rate 
+            
+            steps_this_cycle = 1 // ms_per_step
+            self.step(steps_this_cycle, delay=ms_per_step / 2)
+            steps_stepped += steps_this_cycle
+        
+        # Constant (slow) Speed 
+        self.step(steps - steps_stepped, delay=max_ms_per_step)
 
     def step_waveform(self, steps: int, freq: int):
         """
