@@ -59,9 +59,8 @@ def main():
                 current_direction = tmc2209.Direction.COUNTERCLOCKWISE
             motor.set_direction(current_direction)
             
-            if current_direction == tmc2209.Direction.CLOCKWISE:
+            if current_direction == tmc2209.Direction.COUNTERCLOCKWISE:
                 total_steps = 0
-                motor.set_direction(current_direction)
                 velocities = [20, 33, 66, 50, 57, 100] # mm per s
                 time_frames = [0.05, 0.08, 0.11, 0.15, 0.22, 0.24] # seconds
                 for velocity, time_frame in zip(velocities, time_frames):
@@ -76,7 +75,7 @@ def main():
                 total_steps_going_up = total_steps
             
             else:
-                motor.step(total_steps_going_up)
+                motor.step_waveform(total_steps_going_up, 10000)
             
 
             # During pause, record sensor for ~1s
