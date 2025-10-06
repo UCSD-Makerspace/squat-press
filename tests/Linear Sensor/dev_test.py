@@ -22,11 +22,20 @@ def check_mm_value(sensor, mm_value, since_last_mm):
     return mm_value, since_last_mm + SAMPLE_INTERVAL, None
 
 
-def step_motor_with_recording(motor, sensor, direction, velocities, time_frames,
-                              times, positions, start_time, csv_writer, csv_file, mm_value, since_last_mm):
-    """Perform stepping for a given direction and record sensor data."""
-    total_steps = 0
+def step_motor_profile(motor, sensor, direction, pos_velocities, pos_time_frames,
+                       neg_velocities, neg_time_frames,
+                       times, positions, start_time, csv_writer, csv_file,
+                       mm_value, since_last_mm):
+    if direction == tmc2209.Direction.COUNTERCLOCKWISE:
+        velocities = pos_velocities
+        time_frames = pos_time_frames
+        print("[UP] Motion sequence")
+    else:
+        velocities = neg_velocities
+        time_frames = neg_time_frames
+        print("[DOWN] Motion sequence")
 
+    total_steps = 0
     for velocity, time_frame in zip(velocities, time_frames):
         print(f"[{direction.name}] {velocity} mm/s for {time_frame}s")
         steps = int(time_frame * velocity * STEPS_PER_MM)
@@ -36,7 +45,6 @@ def step_motor_with_recording(motor, sensor, direction, velocities, time_frames,
         motor.step_waveform(steps, freq)
         total_steps += steps
 
-        # Record data point
         mm_value, since_last_mm, raw_val = check_mm_value(sensor, mm_value, since_last_mm)
         if mm_value is not None:
             elapsed = time.time() - start_time
@@ -50,7 +58,6 @@ def step_motor_with_recording(motor, sensor, direction, velocities, time_frames,
 
 
 def update_plot(ax, line, times, positions):
-    """Refresh live matplotlib plot."""
     times_live = times[-200:]
     positions_live = positions[-200:]
     line.set_xdata(times_live)
@@ -58,29 +65,6 @@ def update_plot(ax, line, times, positions):
     ax.relim()
     ax.autoscale_view()
     plt.pause(0.01)
-
-
-def run_motor_cycle(motor, sensor, pos_velocities, pos_time_frames,
-                    neg_velocities, neg_time_frames, times, positions,
-                    start_time, csv_writer, csv_file):
-    """Perform one full up/down cycle."""
-    mm_value = None
-    since_last_mm = 0.0
-    total_steps_going_up = 0
-
-    # Up
-    motor.set_direction(tmc2209.Direction.COUNTERCLOCKWISE)
-    total_steps_going_up, mm_value, since_last_mm = step_motor_with_recording(
-        motor, sensor, tmc2209.Direction.COUNTERCLOCKWISE,
-        pos_velocities, pos_time_frames,
-        times, positions, start_time, csv_writer, csv_file, mm_value, since_last_mm
-    )
-
-    # Down
-    motor.set_direction(tmc2209.Direction.CLOCKWISE)
-    print(f"[DOWN] {total_steps_going_up} steps at 20 mm/s")
-    motor.step_waveform(total_steps_going_up, 20 * STEPS_PER_MM)
-    return mm_value, since_last_mm
 
 
 def main():
@@ -94,7 +78,6 @@ def main():
     csv_writer = csv.writer(csv_file)
     csv_writer.writerow(["time_s", "position_mm", "raw_value"])
 
-    # Live plot setup
     plt.ion()
     fig, ax = plt.subplots(figsize=(10, 6))
     times, positions = [], []
@@ -105,7 +88,6 @@ def main():
     ax.grid(True)
     start_time = time.time()
 
-    # Load velocity config
     base_dir = os.path.dirname(__file__)
     pos_path = os.path.join(base_dir, 'pos_velocity_config.csv')
     neg_path = os.path.join(base_dir, 'neg_velocity_config.csv')
@@ -124,16 +106,27 @@ def main():
             neg_velocities.append(float(row['velocities']))
             neg_time_frames.append(float(row['time_frames']))
 
+    mm_value = None
+    since_last_mm = 0.0
+    current_direction = tmc2209.Direction.COUNTERCLOCKWISE
+
     try:
         while True:
-            mm_value, since_last_mm = run_motor_cycle(
-                motor, sensor,
+            motor.set_direction(current_direction)
+            total_steps, mm_value, since_last_mm = step_motor_profile(
+                motor, sensor, current_direction,
                 pos_velocities, pos_time_frames,
                 neg_velocities, neg_time_frames,
-                times, positions,
-                start_time, csv_writer, csv_file
+                times, positions, start_time,
+                csv_writer, csv_file,
+                mm_value, since_last_mm
             )
             update_plot(ax, line, times, positions)
+
+            if current_direction == tmc2209.Direction.COUNTERCLOCKWISE:
+                current_direction = tmc2209.Direction.CLOCKWISE
+            else:
+                current_direction = tmc2209.Direction.COUNTERCLOCKWISE
 
     except KeyboardInterrupt:
         print("\nStopped by user")
