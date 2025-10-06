@@ -66,7 +66,7 @@ def main():
                 for velocity, time_frame in zip(velocities, time_frames):
                     print(f"Attempting {velocity}")
                     steps = int(time_frame * velocity * STEPS_PER_MM)
-                    s_per_half_step = (1 / velocity * STEPS_PER_MM) / 2
+                    s_per_half_step = 1 / (velocity * STEPS_PER_MM) / 2
                     print(f"Stepping {steps} steps, with {s_per_half_step} delays for a total of {steps * s_per_half_step * 2} seconds")
                     motor.step(steps, s_per_half_step)
                     total_steps += steps
