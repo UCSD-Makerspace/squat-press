@@ -4,11 +4,12 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import time
 import csv
+import os
 
 SAMPLE_INTERVAL = 0.1
 # STEPS_PER_2_5CM = 915
 # STEPS_PER_MM = 36
-STEPS_PER_MM = 131 # for waveform
+STEPS_PER_MM = 290 # for waveform
 
 def check_mm_value(sensor, mm_value, since_last_mm):
     """Return (interpolated mm, since_last_mm, raw decimal value)"""
@@ -24,7 +25,6 @@ def check_mm_value(sensor, mm_value, since_last_mm):
 
 def main():
     motor = tmc2209.TMC2209()
-    # motor.set_microstepping_mode(tmc2209.MicrosteppingMode.SIXTYFOURTH)
     
     sensor = serial_reader.LinearSensorReader("/dev/ttyACM0", 115200)
     if not sensor.connect():
@@ -50,6 +50,15 @@ def main():
     current_direction = tmc2209.Direction.CLOCKWISE
     total_steps_going_up = 0
 
+    config_file_path = os.path.join(os.path.dirname(__file__), 'mouse_test_config.csv')
+    velocities = []
+    time_frames = []
+    with open(config_file_path, 'r') as config_file:
+        reader = csv.DictReader(config_file)
+        for row in reader:
+            velocities.append(float(row['velocities']))
+            time_frames.append(float(row['time_frames']))
+
     try:
         while True:
             if current_direction == tmc2209.Direction.COUNTERCLOCKWISE:
@@ -61,8 +70,7 @@ def main():
             
             if current_direction == tmc2209.Direction.COUNTERCLOCKWISE:
                 total_steps = 0
-                velocities = [20, 33, 66, 50, 57, 100] # mm per s
-                time_frames = [0.05, 0.08, 0.11, 0.15, 0.22, 0.24] # seconds
+
                 for velocity, time_frame in zip(velocities, time_frames):
                     print(f"Attempting {velocity} mm/s for {time_frame} s")
                     steps = int(time_frame * velocity * STEPS_PER_MM)
