@@ -51,7 +51,7 @@ def main():
     total_steps_going_up = 0
 
     pos_file_path = os.path.join(os.path.dirname(__file__), 'pos_velocity_config.csv')
-    neg_file_path = os.path.join(ps.path.dirname(__file__), 'neg_velocity_config.csv')
+    neg_file_path = os.path.join(os.path.dirname(__file__), 'neg_velocity_config.csv')
     pos_velocities, pos_time_frames, neg_velocities, neg_time_frames = [], [], [], []
 
     # upward velocities
