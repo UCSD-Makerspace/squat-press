@@ -23,55 +23,6 @@ def check_mm_value(sensor, mm_value, since_last_mm):
             print(f"Parse error: {e}, raw={raw_val}")
     return mm_value, since_last_mm + SAMPLE_INTERVAL, None
 
-def step_motor_direction(motor, direction, pos_velocities, pos_time_frames, neg_velocities, neg_time_frames, sensor,
-                          times, positions, start_time, csv_writer, csv_file, mm_value, since_last_mm, total_steps_going_up):
-    if direction == tmc2209.Direction.COUNTERCLOCKWISE:
-        total_steps = 0
-
-        for velocity, time_frame in zip(pos_velocities, pos_time_frames):
-            print(f"Attempting {velocity} mm/s for {time_frame} s")
-            steps = int(time_frame * velocity * STEPS_PER_MM)
-            # s_per_half_step = 1 / (velocity * STEPS_PER_MM) / 2
-            freq = velocity * STEPS_PER_MM
-            print(f"Stepping {steps} steps, with frequency {freq} for a total period of {steps / freq} seconds")
-            motor.step_waveform(steps, velocity * STEPS_PER_MM)
-            total_steps += steps
-
-            # record data
-            mm_value, since_last_mm, raw_val = check_mm_value(sensor, mm_value, since_last_mm)
-            if mm_value is not None:
-                elapsed = time.time() - start_time
-                times.append(elapsed)
-                positions.append(mm_value)
-
-                csv_writer.writerow([elapsed, mm_value, raw_val])
-                csv_file.flush()
-        print(f"Stepped {total_steps} in total")
-        total_steps_going_up = total_steps
-    else:
-        total_steps = 0
-
-        for velocity, time_frame in zip(neg_velocities, neg_time_frames):
-            print(f"Attempting {velocity} mm/s for {time_frame} s")
-            steps = int(time_frame * velocity * STEPS_PER_MM)
-            # s_per_half_step = 1 / (velocity * STEPS_PER_MM) / 2
-            freq = velocity * STEPS_PER_MM
-            print(f"Stepping {steps} steps, with frequency {freq} for a total period of {steps / freq} seconds")
-            motor.step_waveform(steps, velocity * STEPS_PER_MM)
-            total_steps += steps
-
-            # record data
-            mm_value, since_last_mm, raw_val = check_mm_value(sensor, mm_value, since_last_mm)
-            if mm_value is not None:
-                elapsed = time.time() - start_time
-                times.append(elapsed)
-                positions.append(mm_value)
-
-                csv_writer.writerow([elapsed, mm_value, raw_val])
-                csv_file.flush()
-        print(f"Stepped {total_steps} in total")
-        total_steps_going_up = total_steps
-
 def main():
     motor = tmc2209.TMC2209()
     
@@ -138,7 +89,6 @@ def main():
                     motor.step_waveform(steps, velocity * STEPS_PER_MM)
                     total_steps += steps
 
-                    # record data
                     mm_value, since_last_mm, raw_val = check_mm_value(sensor, mm_value, since_last_mm)
                     if mm_value is not None:
                         elapsed = time.time() - start_time
@@ -151,7 +101,26 @@ def main():
                 total_steps_going_up = total_steps
             
             else:
-                motor.step_waveform(total_steps_going_up, 10000)
+                total_steps = 0
+                for velocity, time_frame in zip(neg_velocities, neg_time_frames):
+                    print(f"Attempting {velocity} mm/s for {time_frame} s")
+                    steps = int(time_frame * velocity * STEPS_PER_MM)
+                    # s_per_half_step = 1 / (velocity * STEPS_PER_MM) / 2
+                    freq = velocity * STEPS_PER_MM
+                    print(f"Stepping {steps} steps, with frequency {freq} for a total period of {steps / freq} seconds")
+                    motor.step_waveform(steps, velocity * STEPS_PER_MM)
+                    total_steps += steps
+
+                    # record data
+                    mm_value, since_last_mm, raw_val = check_mm_value(sensor, mm_value, since_last_mm)
+                    if mm_value is not None:
+                        elapsed = time.time() - start_time
+                        times.append(elapsed)
+                        positions.append(mm_value)
+
+                        csv_writer.writerow([elapsed, mm_value, raw_val])
+                        csv_file.flush()
+                print(f"Stepped {total_steps} downward in total")
             
 
             mm_value, since_last_mm, raw_val = check_mm_value(sensor, mm_value, since_last_mm)
@@ -185,7 +154,7 @@ def main():
         fig.savefig(plot_filename_live)
 
         # Save full timeline plot (downsampled)
-        downsample_factor = max(1, len(times) // 10000)  # max 10k points
+        downsample_factor = max(1, len(times) // 10000)
         times_ds = times[::downsample_factor]
         positions_ds = positions[::downsample_factor]
 
