@@ -55,7 +55,7 @@ def main():
                 motor.set_direction(current_direction)
                 velocities = [0.2, 0.33, 0.66, 0.5, 0.57, 1] # mm per 10 ms
                 for velocity in velocities:
-                    steps_per_10_ms = velocity * STEPS_PER_MM
+                    steps_per_10_ms = int(velocity * STEPS_PER_MM)
                     s_per_half_step = 0.01 / steps_per_10_ms / 2
                     motor.step(steps_per_10_ms, s_per_half_step)
 
