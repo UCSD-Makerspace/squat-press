@@ -64,54 +64,49 @@ def main():
                 velocities = [20, 33, 66, 50, 57, 100] # mm per s
                 time_frames = [0.05, 0.08, 0.11, 0.15, 0.22, 0.24] # seconds
                 for velocity, time_frame in zip(velocities, time_frames):
-                    print(f"Attempting {velocity}")
+                    print(f"Attempting {velocity} mm/s for {time_frame} s")
                     steps = int(time_frame * velocity * STEPS_PER_MM)
                     # s_per_half_step = 1 / (velocity * STEPS_PER_MM) / 2
                     freq = velocity * STEPS_PER_MM
                     print(f"Stepping {steps} steps, with frequency {freq} for a total period of {steps / freq} seconds")
                     motor.step_waveform(steps, velocity * STEPS_PER_MM)
                     total_steps += steps
+
+                    # record data
+                    mm_value, since_last_mm, raw_val = check_mm_value(sensor, mm_value, since_last_mm)
+                    if mm_value is not None:
+                        elapsed = time.time() - start_time
+                        times.append(elapsed)
+                        positions.append(mm_value)
+
+                        csv_writer.writerow([elapsed, mm_value, raw_val])
+                        csv_file.flush()
                 print(f"Stepped {total_steps} in total")
                 total_steps_going_up = total_steps
-
-                # record data
-                mm_value, since_last_mm, raw_val = check_mm_value(sensor, mm_value, since_last_mm)
-                if mm_value is not None:
-                    elapsed = time.time() - start_time
-                    times.append(elapsed)
-                    positions.append(mm_value)
-
-                    # Write full-resolution CSV with raw value
-                    csv_writer.writerow([elapsed, mm_value, raw_val])
-                    csv_file.flush()
             
             else:
                 motor.step_waveform(total_steps_going_up, 10000)
             
 
-            # During pause, record sensor for ~1s
-            for _ in range(int(1 / SAMPLE_INTERVAL)):
-                mm_value, since_last_mm, raw_val = check_mm_value(sensor, mm_value, since_last_mm)
+            mm_value, since_last_mm, raw_val = check_mm_value(sensor, mm_value, since_last_mm)
 
-                if mm_value is not None:
-                    elapsed = time.time() - start_time
-                    times.append(elapsed)
-                    positions.append(mm_value)
+            if mm_value is not None:
+                elapsed = time.time() - start_time
+                times.append(elapsed)
+                positions.append(mm_value)
 
-                    # Write full-resolution CSV with raw value
-                    csv_writer.writerow([elapsed, mm_value, raw_val])
-                    csv_file.flush()
+                # Write full-resolution CSV with raw value
+                csv_writer.writerow([elapsed, mm_value, raw_val])
+                csv_file.flush()
 
-                    # Live plot: keep only last 200 points
-                    times_live = times[-200:]
-                    positions_live = positions[-200:]
-                    line.set_xdata(times_live)
-                    line.set_ydata(positions_live)
-                    ax.relim()
-                    ax.autoscale_view()
-                    plt.pause(0.01)
-
-                time.sleep(SAMPLE_INTERVAL)
+                # Live plot: keep only last 200 points
+                times_live = times[-200:]
+                positions_live = positions[-200:]
+                line.set_xdata(times_live)
+                line.set_ydata(positions_live)
+                ax.relim()
+                ax.autoscale_view()
+                plt.pause(0.01)
 
     except KeyboardInterrupt:
         print("\nStopped by user")
