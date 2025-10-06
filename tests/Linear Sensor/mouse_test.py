@@ -61,16 +61,15 @@ def main():
             if current_direction == tmc2209.Direction.CLOCKWISE:
                 total_steps = 0
                 motor.set_direction(current_direction)
-                velocities = [0.2, 0.33, 0.66, 0.5, 0.57, 1] # mm per 10 ms
+                velocities = [20, 33, 66, 50, 57, 100] # mm per s
                 time_frames = [0.05, 0.08, 0.11, 0.15, 0.22, 0.24] # seconds
                 for velocity, time_frame in zip(velocities, time_frames):
                     print(f"Attempting {velocity}")
-                    steps_per_10_ms = int(velocity * STEPS_PER_MM)
-                    number_of_steps_in_this_cycle = int(time_frame * 100 * steps_per_10_ms)
-                    s_per_half_step = time_frame * 100 / steps_per_10_ms / 2
-                    print(f"Stepping {number_of_steps_in_this_cycle} steps, with {s_per_half_step} delays")
-                    motor.step(number_of_steps_in_this_cycle, s_per_half_step)
-                    total_steps += steps_per_10_ms
+                    steps = int(time_frame * velocity * STEPS_PER_MM)
+                    s_per_half_step = (1 / velocity * STEPS_PER_MM) / 2
+                    print(f"Stepping {steps} steps, with {s_per_half_step} delays for a total of {steps * s_per_half_step * 2} seconds")
+                    motor.step(steps, s_per_half_step)
+                    total_steps += steps
                 print(f"Stepped {total_steps} in total")
                 total_steps_going_up = total_steps
             
