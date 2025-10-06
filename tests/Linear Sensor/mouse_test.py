@@ -63,10 +63,10 @@ def main():
                 motor.set_direction(current_direction)
                 velocities = [0.2, 0.33, 0.66, 0.5, 0.57, 1] # mm per 10 ms
                 time_frames = [0.05, 0.08, 0.11, 0.15, 0.22, 0.24] # seconds
-                for velocity in velocities:
+                for velocity, time_frame in enumerate(zip(velocities, time_frames)):
                     print(f"Attempting {velocity}")
                     steps_per_10_ms = int(velocity * STEPS_PER_MM)
-                    s_per_half_step = time_frames * 100 / steps_per_10_ms / 2
+                    s_per_half_step = time_frame * 100 / steps_per_10_ms / 2
                     print(f"Stepping {steps_per_10_ms} steps, with {s_per_half_step} delays")
                     motor.step(steps_per_10_ms, s_per_half_step)
                     total_steps += steps_per_10_ms
