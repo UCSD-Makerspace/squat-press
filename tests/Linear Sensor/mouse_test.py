@@ -47,11 +47,19 @@ def main():
     mm_value = None
     since_last_mm = 0.0
     current_direction = tmc2209.Direction.CLOCKWISE
+    total_steps_going_up = 0
 
     try:
         while True:
             if current_direction == tmc2209.Direction.COUNTERCLOCKWISE:
                 current_direction = tmc2209.Direction.CLOCKWISE
+
+            else:
+                current_direction = tmc2209.Direction.COUNTERCLOCKWISE
+            motor.set_direction(current_direction)
+            
+            if current_direction == tmc2209.Direction.CLOCKWISE:
+                total_steps = 0
                 motor.set_direction(current_direction)
                 velocities = [0.2, 0.33, 0.66, 0.5, 0.57, 1] # mm per 10 ms
                 for velocity in velocities:
@@ -60,11 +68,12 @@ def main():
                     s_per_half_step = 0.01 / steps_per_10_ms / 2
                     print(f"Stepping {steps_per_10_ms} steps, with {s_per_half_step} delays")
                     motor.step(steps_per_10_ms, s_per_half_step)
-
+                    total_steps += steps_per_10_ms
+                print(f"Stepped {total_steps} in total")
+                total_steps_going_up = total_steps
+            
             else:
-                current_direction = tmc2209.Direction.COUNTERCLOCKWISE
-                motor.set_direction(current_direction)
-
+                motor.step(total_steps_going_up)
             
 
             # During pause, record sensor for ~1s
