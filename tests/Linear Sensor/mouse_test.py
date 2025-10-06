@@ -73,6 +73,17 @@ def main():
                     total_steps += steps
                 print(f"Stepped {total_steps} in total")
                 total_steps_going_up = total_steps
+
+                # record data
+                mm_value, since_last_mm, raw_val = check_mm_value(sensor, mm_value, since_last_mm)
+                if mm_value is not None:
+                    elapsed = time.time() - start_time
+                    times.append(elapsed)
+                    positions.append(mm_value)
+
+                    # Write full-resolution CSV with raw value
+                    csv_writer.writerow([elapsed, mm_value, raw_val])
+                    csv_file.flush()
             
             else:
                 motor.step_waveform(total_steps_going_up, 10000)
