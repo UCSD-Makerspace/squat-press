@@ -8,7 +8,7 @@ import csv
 SAMPLE_INTERVAL = 0.1
 # STEPS_PER_2_5CM = 915
 # STEPS_PER_MM = 36
-STEPS_PER_MM = 1314 # for waveform
+STEPS_PER_MM = 131 # for waveform
 
 def check_mm_value(sensor, mm_value, since_last_mm):
     """Return (interpolated mm, since_last_mm, raw decimal value)"""
