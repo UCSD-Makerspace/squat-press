@@ -97,7 +97,7 @@ def main():
 
                         csv_writer.writerow([elapsed, mm_value, raw_val])
                         csv_file.flush()
-                print(f"Stepped {total_steps} in total")
+                print(f"Stepped {total_steps} upward in total")
                 total_steps_going_up = total_steps
             
             else:
