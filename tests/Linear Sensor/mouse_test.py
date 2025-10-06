@@ -7,7 +7,8 @@ import csv
 
 SAMPLE_INTERVAL = 0.1
 # STEPS_PER_2_5CM = 915
-STEPS_PER_MM = 36
+# STEPS_PER_MM = 36
+STEPS_PER_MM = 1314 # for waveform
 
 def check_mm_value(sensor, mm_value, since_last_mm):
     """Return (interpolated mm, since_last_mm, raw decimal value)"""
@@ -66,9 +67,10 @@ def main():
                 for velocity, time_frame in zip(velocities, time_frames):
                     print(f"Attempting {velocity}")
                     steps = int(time_frame * velocity * STEPS_PER_MM)
-                    s_per_half_step = 1 / (velocity * STEPS_PER_MM) / 2
-                    print(f"Stepping {steps} steps, with {s_per_half_step} delays for a total of {steps * s_per_half_step * 2} seconds")
-                    motor.step(steps, s_per_half_step)
+                    # s_per_half_step = 1 / (velocity * STEPS_PER_MM) / 2
+                    freq = velocity * STEPS_PER_MM
+                    print(f"Stepping {steps} steps, with frequency {freq} for a total period of {steps / freq} seconds")
+                    motor.step_waveform(steps, velocity * STEPS_PER_MM)
                     total_steps += steps
                 print(f"Stepped {total_steps} in total")
                 total_steps_going_up = total_steps
