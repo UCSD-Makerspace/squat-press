@@ -7,8 +7,6 @@ import csv
 import os
 
 SAMPLE_INTERVAL = 0.1
-# STEPS_PER_2_5CM = 915
-# STEPS_PER_MM = 36
 STEPS_PER_MM = 290 # for waveform
 
 def check_mm_value(sensor, mm_value, since_last_mm):
@@ -47,21 +45,38 @@ def main():
 
     mm_value = None
     since_last_mm = 0.0
+
+    def log_to_csv_and_graph():
+        nonlocal mm_value, since_last_mm, times, positions
+        mm_value, since_last_mm, raw_val = check_mm_value(sensor, mm_value, since_last_mm)
+        if mm_value is not None:
+            elapsed = time.time() - start_time
+            times.append(elapsed)
+            positions.append(mm_value)
+
+            csv_writer.writerow([elapsed, mm_value, raw_val])
+            csv_file.flush()
+
+            times = times[-200:]
+            positions = positions[-200:]
+            line.set_xdata(times)
+            line.set_ydata(positions)
+            ax.relim()
+            ax.autoscale_view()
+            plt.pause(0.01)
+
     current_direction = tmc2209.Direction.CLOCKWISE
-    total_steps_going_up = 0
 
     pos_file_path = os.path.join(os.path.dirname(__file__), 'pos_velocity_config.csv')
     neg_file_path = os.path.join(os.path.dirname(__file__), 'neg_velocity_config.csv')
     pos_velocities, pos_time_frames, neg_velocities, neg_time_frames = [], [], [], []
 
-    # upward velocities
     with open(pos_file_path, 'r') as config_file:
         reader = csv.DictReader(config_file)
         for row in reader:
             pos_velocities.append(float(row['velocities']))
             pos_time_frames.append(float(row['time_frames']))
 
-    # downward velocities
     with open(neg_file_path, 'r') as config_file:
         reader = csv.DictReader(config_file)
         for row in reader:
@@ -70,78 +85,34 @@ def main():
 
     try:
         while True:
-            if current_direction == tmc2209.Direction.COUNTERCLOCKWISE:
-                current_direction = tmc2209.Direction.CLOCKWISE
-
-            else:
-                current_direction = tmc2209.Direction.COUNTERCLOCKWISE
+            current_direction = current_direction.flip()
             motor.set_direction(current_direction)
             
             if current_direction == tmc2209.Direction.COUNTERCLOCKWISE:
                 total_steps = 0
 
                 for velocity, time_frame in zip(pos_velocities, pos_time_frames):
-                    print(f"Attempting {velocity} mm/s for {time_frame} s")
                     steps = int(time_frame * velocity * STEPS_PER_MM)
-                    # s_per_half_step = 1 / (velocity * STEPS_PER_MM) / 2
                     freq = velocity * STEPS_PER_MM
-                    print(f"Stepping {steps} steps, with frequency {freq} for a total period of {steps / freq} seconds")
-                    motor.step_waveform(steps, velocity * STEPS_PER_MM)
+                    motor.step_waveform(steps, freq)
                     total_steps += steps
 
-                    mm_value, since_last_mm, raw_val = check_mm_value(sensor, mm_value, since_last_mm)
-                    if mm_value is not None:
-                        elapsed = time.time() - start_time
-                        times.append(elapsed)
-                        positions.append(mm_value)
-
-                        csv_writer.writerow([elapsed, mm_value, raw_val])
-                        csv_file.flush()
+                    log_to_csv_and_graph()
                 print(f"Stepped {total_steps} upward in total")
-                total_steps_going_up = total_steps
             
             else:
                 total_steps = 0
+
                 for velocity, time_frame in zip(neg_velocities, neg_time_frames):
-                    print(f"Attempting {velocity} mm/s for {time_frame} s")
                     steps = int(time_frame * velocity * STEPS_PER_MM)
-                    # s_per_half_step = 1 / (velocity * STEPS_PER_MM) / 2
                     freq = velocity * STEPS_PER_MM
-                    print(f"Stepping {steps} steps, with frequency {freq} for a total period of {steps / freq} seconds")
-                    motor.step_waveform(steps, velocity * STEPS_PER_MM)
+                    motor.step_waveform(steps, freq)
                     total_steps += steps
 
-                    # record data
-                    mm_value, since_last_mm, raw_val = check_mm_value(sensor, mm_value, since_last_mm)
-                    if mm_value is not None:
-                        elapsed = time.time() - start_time
-                        times.append(elapsed)
-                        positions.append(mm_value)
-
-                        csv_writer.writerow([elapsed, mm_value, raw_val])
-                        csv_file.flush()
+                    log_to_csv_and_graph()
                 print(f"Stepped {total_steps} downward in total")
-            
 
-            mm_value, since_last_mm, raw_val = check_mm_value(sensor, mm_value, since_last_mm)
-
-            if mm_value is not None:
-                elapsed = time.time() - start_time
-                times.append(elapsed)
-                positions.append(mm_value)
-
-                # Write full-resolution CSV with raw value
-                csv_writer.writerow([elapsed, mm_value, raw_val])
-                csv_file.flush()
-
-                # Live plot: keep only last 200 points
-                times_live = times[-200:]
-                positions_live = positions[-200:]
-                line.set_xdata(times_live)
-                line.set_ydata(positions_live)
-                ax.relim()
-                ax.autoscale_view()
-                plt.pause(0.01)
+            log_to_csv_and_graph()
 
     except KeyboardInterrupt:
         print("\nStopped by user")
@@ -149,11 +120,9 @@ def main():
     finally:
         csv_file.close()
 
-        # Save live plot (last ~200 points)
         plot_filename_live = f"sensor_plot_{timestamp}.png"
         fig.savefig(plot_filename_live)
 
-        # Save full timeline plot (downsampled)
         downsample_factor = max(1, len(times) // 10000)
         times_ds = times[::downsample_factor]
         positions_ds = positions[::downsample_factor]

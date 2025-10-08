@@ -41,6 +41,11 @@ class Direction(Enum):
     @property
     def sign(self) -> int:
         return 1 if self == Direction.COUNTERCLOCKWISE else -1
+    
+    def flip(self) -> 'Direction':
+        if self == Direction.COUNTERCLOCKWISE:
+            return Direction.CLOCKWISE
+        return Direction.COUNTERCLOCKWISE
 
 class TMC2209:
     def __init__(
