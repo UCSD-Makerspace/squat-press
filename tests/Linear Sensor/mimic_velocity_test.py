@@ -8,6 +8,7 @@ import os
 
 SAMPLE_INTERVAL = 0.1
 STEPS_PER_MM = 290 # for waveform
+FREQ_MULTIPLIER = 2.0
 
 def check_mm_value(sensor, mm_value, since_last_mm):
     """Return (interpolated mm, since_last_mm, raw decimal value)"""
@@ -63,7 +64,7 @@ def main():
             line.set_ydata(positions)
             ax.relim()
             ax.autoscale_view()
-            plt.pause(0.01)
+
 
     current_direction = tmc2209.Direction.CLOCKWISE
 
@@ -93,7 +94,7 @@ def main():
 
                 for velocity, time_frame in zip(pos_velocities, pos_time_frames):
                     steps = int(time_frame * velocity * STEPS_PER_MM)
-                    freq = velocity * STEPS_PER_MM
+                    freq = velocity * STEPS_PER_MM * FREQ_MULTIPLIER
                     motor.step_waveform(steps, freq)
                     total_steps += steps
 
@@ -105,7 +106,7 @@ def main():
 
                 for velocity, time_frame in zip(neg_velocities, neg_time_frames):
                     steps = int(time_frame * velocity * STEPS_PER_MM)
-                    freq = velocity * STEPS_PER_MM
+                    freq = velocity * STEPS_PER_MM * FREQ_MULTIPLIER
                     motor.step_waveform(steps, freq)
                     total_steps += steps
 
