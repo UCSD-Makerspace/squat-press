@@ -109,7 +109,7 @@ def main():
                     steps = int(time_frame * velocity * STEPS_PER_MM)
                     # freq = velocity * STEPS_PER_MM
                     freq = 15000
-                    motor.step_waveform(steps, freq)
+                    motor.step_waveform(steps + 3, freq)
                     total_steps += steps
 
                     log_to_csv_and_graph()
