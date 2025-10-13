@@ -94,7 +94,8 @@ def main():
 
                 for velocity, time_frame in zip(pos_velocities, pos_time_frames):
                     steps = int(time_frame * velocity * STEPS_PER_MM)
-                    freq = velocity * STEPS_PER_MM 
+                    # freq = velocity * STEPS_PER_MM 
+                    freq = 15000
                     motor.step_waveform(steps, freq)
                     total_steps += steps
 
@@ -106,7 +107,8 @@ def main():
 
                 for velocity, time_frame in zip(neg_velocities, neg_time_frames):
                     steps = int(time_frame * velocity * STEPS_PER_MM)
-                    freq = velocity * STEPS_PER_MM
+                    # freq = velocity * STEPS_PER_MM
+                    freq = 15000
                     motor.step_waveform(steps, freq)
                     total_steps += steps
 
