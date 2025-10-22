@@ -3,8 +3,9 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import time
 import csv
+from typing import Optional
 
-def check_mm_value(sensor: serial_reader.LinearSensorReader):
+def check_mm_value(sensor: serial_reader.LinearSensorReader, last_val: Optional[float], last_raw_val: Optional[float]):
     """Return (interpolated mm, raw decimal value)"""
     raw_val = sensor.send_command('F')
     if raw_val:
@@ -14,7 +15,7 @@ def check_mm_value(sensor: serial_reader.LinearSensorReader):
             return mm, decimal_value
         except Exception as e:
             print(f"Parse error: {e}, raw={raw_val}")
-    return None, None
+    return last_val, last_raw_val
 
 def main():
     sensor = serial_reader.LinearSensorReader("/dev/ttyACM0", 115200)
@@ -40,7 +41,7 @@ def main():
 
     try:
         while True:
-            mm_value, raw_val = check_mm_value(sensor)
+            mm_value, raw_val = check_mm_value(sensor, mm_value, raw_val)
 
             if mm_value is not None:
                 elapsed = time.time() - start_time
