@@ -38,6 +38,7 @@ def main():
     start_time = time.time()
 
     mm_value = None
+    raw_val = None
 
     try:
         while True:
