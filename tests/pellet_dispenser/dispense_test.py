@@ -108,3 +108,11 @@ def main():
     if remaining_time > 0:
         logging.info(f"Waiting {remaining_time:.2f} seconds until next dispense...")
         time.sleep(remaining_time)
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s - %(levelname)s - %(message)s')
+    try:
+        main()
+    except Exception as e:
+        logging.error(f"Unhandled exception in main: {e}")
