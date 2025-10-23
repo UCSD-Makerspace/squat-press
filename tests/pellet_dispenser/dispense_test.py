@@ -36,6 +36,7 @@ def dispense(motor, ltc) -> bool:
         return False
     
     TOTAL_ROTATED = 0
+    logging.info("Attempting dispense...")
 
     while not rotate_step(motor, STEP_DEGREES, ltc):
         ltc.update()
