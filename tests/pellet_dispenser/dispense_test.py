@@ -97,18 +97,18 @@ def main():
     while time.time() - start_global < RUN_TIME:
         cycle_start = time.time()
 
-    success = dispense(motor, LTC)
-    if success:
-        dispensed += 1
-        logging.info(f"Successfully dispensed pellet! Total dispensed: {dispensed}")
-    else:
-        logging.error("Failed to dispense pellet")
+        success = dispense(motor, LTC)
+        if success:
+            dispensed += 1
+            logging.info(f"Successfully dispensed pellet! Total dispensed: {dispensed}")
+        else:
+            logging.error("Failed to dispense pellet")
 
-    elapsed = time.time() - cycle_start
-    remaining_time = dispense_interval - elapsed
-    if remaining_time > 0:
-        logging.info(f"Waiting {remaining_time:.2f} seconds until next dispense...")
-        time.sleep(remaining_time)
+        elapsed = time.time() - cycle_start
+        remaining_time = dispense_interval - elapsed
+        if remaining_time > 0:
+            logging.info(f"Waiting {remaining_time:.2f} seconds until next dispense...")
+            time.sleep(remaining_time)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO,
