@@ -10,11 +10,11 @@ from threading import Thread
 import logging
 
 # Default Pin Definitions
-DIR_PIN = 23
-STEP_PIN = 24
-MS1_PIN = 22
-MS2_PIN = 27
-EN_PIN = 17
+DIR_PIN = 5
+STEP_PIN = 19
+MS1_PIN = 16
+MS2_PIN = 21
+EN_PIN = 26
 DEFAULT_SPR = 200 # 200 spr = 1.8 degrees per step
 
 

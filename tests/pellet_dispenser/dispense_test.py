@@ -41,7 +41,7 @@ def dispense(motor, ltc) -> bool:
     while not rotate_step(motor, STEP_DEGREES, ltc):
         ltc.update()
         rotate_step(motor, STEP_DEGREES, ltc)
-        time.sleep(0.1)
+        time.sleep(1.5)
         TOTAL_ROTATED += STEP_DEGREES
         time.sleep(ROTATE_COOLDOWN)
 
