@@ -17,6 +17,7 @@ def rotate_step(motor, step_degrees, ltc) -> bool:
 
         while thread.is_alive():
             ltc.update()
+            # TODO: Update so that we don't stop mid rotation but rather finish the rotation
             if ltc.get_detected():
                 logging.info("Pellet detected during rotation, stopping motor")
                 thread.join(timeout=2.0)
