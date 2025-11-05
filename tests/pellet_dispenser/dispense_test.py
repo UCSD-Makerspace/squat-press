@@ -5,7 +5,8 @@ import logging
 import time
 import pigpio
 
-STEP_DEGREES = 360 / 8 # 8 total steps for 1 revolution (8 holes in the pellet wheel)
+STEP_DEGREES = 48 # 8 total steps for 1 revolution (8 holes in the pellet wheel)
+STEPBACK = 3 # step back 3 degrees after rotating 48
 MAX_ROTATION = 45 * 9 # 45 degrees per rotation; jitter if after 9 rotations pellet is not found
 ROTATE_COOLDOWN = 1.0 # 1 second cooldown between rotations
 JITTER_DEGREES = 20
@@ -42,15 +43,16 @@ def dispense(motor, ltc) -> bool:
     while not rotate_step(motor, STEP_DEGREES, ltc):
         ltc.update()
         rotate_step(motor, STEP_DEGREES, ltc)
+        rotate_step(motor, -STEPBACK, ltc)
         time.sleep(1.5)
         TOTAL_ROTATED += STEP_DEGREES
         time.sleep(ROTATE_COOLDOWN)
 
-        if TOTAL_ROTATED >= MAX_ROTATION:
-            logging.info("Failed to dispense pellet after 5 rotations, jittering...")
-            jitter(motor, JITTER_DEGREES, JITTER_AMOUNT)
-            TOTAL_ROTATED = 0
-            time.sleep(ROTATE_COOLDOWN)
+        # if TOTAL_ROTATED >= MAX_ROTATION:
+        #     logging.info("Failed to dispense pellet after 5 rotations, jittering...")
+        #     jitter(motor, JITTER_DEGREES, JITTER_AMOUNT)
+        #     TOTAL_ROTATED = 0
+        #     time.sleep(ROTATE_COOLDOWN)
 
     motor.stop()
     return True
