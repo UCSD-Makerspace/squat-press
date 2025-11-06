@@ -70,3 +70,5 @@ def init_threads(linear_sensor, LTC, motor):
     # Main controller
     manager = EventManager(event_queue, dispenser_thread)
     manager.run()
+    
+    return linear_sensor, LTC, motor, manager

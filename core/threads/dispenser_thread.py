@@ -1,4 +1,5 @@
 import threading, time
+from events import EventType
 from rotate import dispense
 
 class DispenserThread(threading.Thread):
@@ -7,6 +8,6 @@ class DispenserThread(threading.Thread):
         self.motor = motor
         self.queue = event_queue
 
-    def dispense(self):
+    def dispense_pellet(self):
         self.motor.dispense()
         self.queue.put((EventType.DISPENSEDONE, None, time.time()))
