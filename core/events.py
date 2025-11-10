@@ -3,6 +3,7 @@ import queue
 
 class EventType(Enum):
     LIFT_DETECTED = auto()
+    LIFT_COMPLETED = auto()
     PELLET_DISPENSED = auto()
     PELLET_TAKEN = auto()
 
