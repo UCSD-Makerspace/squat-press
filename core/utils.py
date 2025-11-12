@@ -1,10 +1,15 @@
+"""
+This module contains utility functions for the main loop
+"""
+
 import logging
 import pigpio
 import queue
+from collections import deque
 
-import Dispenser.TMC2209.tmc2209 as tmc2209
-from Dispenser.PhotoInterruptor.PhotoInterruptor import PhotoInterruptor
-import lx3302a.SENTReader.serial_reader as serial_reader
+from dispenser.ESP32Motor import ESP32Motor
+from dispenser.PhotoInterruptor.PhotoInterruptor import PhotoInterruptor
+from lx3302a.SENTReader.serial_reader import LinearSensorReader
 
 from core.threads.dispenser_thread import DispenserThread
 from core.threads.linear_sensor_thread import LinearSensorThread
@@ -12,23 +17,25 @@ from core.threads.ltc_thread import LTCThread
 from event_manager import EventManager
 
 def init_hardware(pi):
-    linear_sensor, LTC, motor = None, None, None
-    
+    """Initialize hardware components: linear sensor, photo interruptor, and motor."""
+    linear_sensor, ltc, motor = None, None, None
     try:
         logging.info("Initializing linear sensor...")
-        linear_sensor = serial_reader.LinearSensorReader('/dev/ttyACM0', 115200)
+        linear_sensor = LinearSensorReader('/dev/ttyACM0', 115200)
+
         if not linear_sensor.connect():
             raise Exception("Failed to connect to linear sensor")
-        
+
         logging.info("Initializing photo interruptor...")
-        LTC = PhotoInterruptor(pi)
-        
+        ltc = PhotoInterruptor(pi)
+
         logging.info("Initializing motor...")
-        motor = tmc2209.TMC2209()
-        motor.set_microstepping_mode(tmc2209.MicrosteppingMode.SIXTYFOURTH)
-        
-        return linear_sensor, LTC, motor
-        
+        motor = ESP32Motor(port = "/dev/ttyUSB0", baudrate=115200)
+        if not motor.connect():
+            raise Exception("Failed to connect to motor")
+
+        return linear_sensor, ltc, motor
+
     except Exception as e:
         logging.error(f"Failed to initialize hardware components: {e}")
         if linear_sensor:
@@ -37,30 +44,27 @@ def init_hardware(pi):
             except:
                 pass
         return None, None, None
-    
+
 def init_pi():
+    """Initialize pigpio and return the pi instance."""
     pi = pigpio.pi()
     if not pi.connected:
         logging.error("Failed to connect to pigpio daemon")
         return None
     return pi
 
-def check_all_hardware(pi, LTC, motor):
-    if not all([pi, LTC, motor]):
+def check_all_hardware(pi, ltc, motor):
+    """Check if all hardware components are initialized properly."""
+    if not all([pi, ltc, motor]):
         logging.error("Hardware initialization failed. Exiting.")
         return None
-    
-def check_mm_value(linear_sensor, mm_value, since_last_mm, config):
-    new_mm = linear_sensor.get_position()
-    if new_mm is not None:
-        return new_mm, 0.0
-    else:
-        return mm_value, since_last_mm + config.SAMPLE_TIME
-    
-def init_threads(linear_sensor, LTC, motor):
+
+def init_threads(linear_sensor, ltc, motor):
+    """Initialize and start threads for linear sensor, LTC, and dispenser."""
     event_queue = queue.Queue()
-    linear_thread = LinearSensorThread(linear_sensor, event_queue, threshold=10)
-    ltc_thread = LTCThread(LTC, event_queue)
+    linear_thread = LinearSensorThread(linear_sensor, event_queue, 
+                                       mm_threshold=10, recent_lifts=deque())
+    ltc_thread = LTCThread(ltc, event_queue)
     dispenser_thread = DispenserThread(motor, event_queue)
 
     linear_thread.start()
@@ -70,5 +74,5 @@ def init_threads(linear_sensor, LTC, motor):
     # Main controller
     manager = EventManager(event_queue, dispenser_thread)
     manager.run()
-    
-    return linear_sensor, LTC, motor, manager
+
+    return linear_sensor, ltc, motor, manager

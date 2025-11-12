@@ -4,7 +4,7 @@ from typing import List, Optional
 from phases import Phase
 
 class PhaseManager():
-    def __init__(self, phases: List[Phase] = None):
+    def __init__(self, phases: Optional[List[Phase]] = None):
         self.phases = phases or []
         self.current_phase_index = 0
         self.current_phase = None
@@ -75,7 +75,7 @@ class PhaseManager():
         return False
     
     def end_trial(self) -> None:
-        if self.is_trial_active:
+        if self.is_trial_active and self.trial_start_time is not None:
             trial_duration = time.time() - self.trial_start_time
             logging.info(f"Trial ended after {trial_duration:.2f} seconds")
 
@@ -108,7 +108,8 @@ class PhaseManager():
             logging.warning("Cannot force advance phase - trial not active")
             return None
         
-        logging.info(f"Manually advancing from phase: {self.current_phase.config.name}")
+        phase_name = self.current_phase.config.name if self.current_phase else "Unknown"
+        logging.info(f"Manually advancing from phase: {phase_name}")
         return self.advance_to_next_phase()
     
     def reset_trial(self) -> None:
@@ -122,11 +123,11 @@ class PhaseManager():
     def get_phase_list(self) -> List[str]:
         if self.phases:
             return [phase.config.name for phase in self.phases]
-        else: return None
+        return []
 
     def is_trial_complete(self) -> bool:
         return not self.is_trial_active
-    
+
     def __repr__(self) -> str:
         status = "Active" if self.is_trial_active else "Inactive"
         current = self.current_phase.config.name if self.current_phase else "None"
