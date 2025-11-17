@@ -105,7 +105,7 @@ class LinearSensorReader:
                 ratio = (raw_value - r1) / (r2 - r1)
                 return mm1 + ratio * (mm2 - mm1)
 
-        return None
+        return -1.0
 
     def get_status(self):
         return self.send_command('G')

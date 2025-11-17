@@ -23,4 +23,4 @@ def interpolate(SENT: int, calibration_table) -> float:
             return interpolated_distance
 
     print(f"SENT value {SENT} not within calibration table interpolation range.")
-    return None
+    return -1.0

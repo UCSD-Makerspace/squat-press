@@ -4,8 +4,8 @@ import pigpio
 import time
 import threading
 
-import Dispenser.TMC2209.tmc2209 as tmc2209
-from Dispenser.PhotoInterruptor.PhotoInterruptor import PhotoInterruptor
+import dispenser.TMC2209.tmc2209 as tmc2209
+from dispenser.PhotoInterruptor.PhotoInterruptor import PhotoInterruptor
 import lx3302a.SENTReader.serial_reader as serial_reader
 from rotate import dispense
 
@@ -105,8 +105,8 @@ def check_all_hardware(pi, LTC, motor):
         logging.error("Hardware initialization failed. Exiting.")
         return None
 
-def check_mm_value(p, mm_value, since_last_mm, config):
-    new_mm = p.get_position()
+def check_mm_value(linear_sensor, mm_value, since_last_mm, config):
+    new_mm = linear_sensor.get_position()
     if new_mm is not None:
         return new_mm, 0.0
     else:
