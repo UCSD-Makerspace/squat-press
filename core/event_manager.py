@@ -14,7 +14,7 @@ class EventManager:
 
     def run(self):
         while True:
-            evt, payload, time = self.q.get(timeout="1")
+            evt, payload, time = self.q.get(timeout=1)
             self.log_event(evt, payload, time)
             if evt == EventType.LIFT_DETECTED and self.ready_to_dispense:
                 logging.info("Lift detected, dispensing pellet...")
