@@ -1,6 +1,7 @@
 import csv
 import logging
 import os
+import queue
 
 from events import EventType
 
@@ -14,8 +15,12 @@ class EventManager:
 
     def run(self):
         while True:
-            evt, payload, time = self.q.get(timeout=1)
-            self.log_event(evt, payload, time)
+            try:
+                evt, payload, t = self.q.get(timeout=1)
+            except queue.Empty:
+                continue  # just loop again if no events
+
+            self.log_event(evt, payload, t)
             if evt == EventType.LIFT_DETECTED and self.ready_to_dispense:
                 logging.info("Lift detected, dispensing pellet...")
                 self.dispenser.dispense_pellet()
