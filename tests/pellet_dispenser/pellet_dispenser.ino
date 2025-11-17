@@ -5,8 +5,8 @@
 #define RPM 10
 
 // Pin setup
-#define DIR 18
-#define STEP 19
+#define DIR 13
+#define STEP 12
 
 // #define MS1 22
 // #define MS2 23

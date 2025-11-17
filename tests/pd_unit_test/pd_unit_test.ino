@@ -6,8 +6,8 @@
 #define FAST_RPM 20
 
 // Pin setup
-#define DIR 18
-#define STEP 19
+#define DIR 13
+#define STEP 12
 
 // #define MS1 22
 // #define MS2 23
@@ -24,23 +24,26 @@ void setup() {
     delay(1000);
 
     stepper.begin(NORMAL_RPM, MICROSTEPS);
-    stepper.setEnableActiveState(LOW);
-    stepper.enable();
+    stepper.setEnableActiveState(HIGH);
+    stepper.disable();
 
     Serial.println("Stepper ready.");
     delay(1000);
 }
 
 void dispense_pellet() {
-    Serial.print("Pellet dispense begun");
+    stepper.enable();
+    delay(50);
+    Serial.println("Pellet dispense begun");
     stepper.setRPM(NORMAL_RPM);
     stepper.rotate(55);
-    Serial.print("Rotated 55 degrees");
+    Serial.println("Rotated 55 degrees");
 
     delay(100); // experiment with this timing. we want this as fast as possible
     stepper.setRPM(FAST_RPM);
     stepper.rotate(-10);
-    Serial.print("Rotated -10 degrees");
+    Serial.println("Rotated -10 degrees");
+    stepper.disable();
 }
 
 void loop() {
@@ -54,10 +57,13 @@ void loop() {
             int degrees = input.toInt();
 
             Serial.print("Received command: ");
-            Serial.print(degrees);
+            Serial.println(degrees);
 
             stepper.rotate(degrees);
         }
     }
-    delay(1000);
+    else
+    {
+        delay(200);
+    }
 }

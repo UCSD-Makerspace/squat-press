@@ -7,6 +7,7 @@ const long SERIAL_BAUD_RATE = 115200;
 const int RX_PIN = 16;
 const int TX_PIN = 17;
 const uint8_t REPLY_DELAY = 4;
+const int ENABLE_PIN = 19;
 
 bool connected = false;
 bool overheated = false;
@@ -15,7 +16,7 @@ bool overheated_shutdown = false;
 TMC2209::Status status;
 constexpr int NUM_STEPS = 9;
 const int velocities[NUM_STEPS] = {250, 500, 1000, 1500, 2000, 3000, 4000, 2000, 500};
-const int waitTimesMs[NUM_STEPS] = {40, 40, 40, 40, 40, 40, 100, 40, 40};
+const int waitTimesMs[NUM_STEPS] = {60, 60, 40, 40, 40, 40, 50, 40, 40};
 
 void connectAndSetDefaultConfig()
 {
@@ -42,7 +43,7 @@ void connectAndSetDefaultConfig()
     stepper_driver.enableAutomaticCurrentScaling();
     stepper_driver.disableStealthChop();
     stepper_driver.setStandstillMode(TMC2209::StandstillMode::BRAKING);
-    stepper_driver.setRunCurrent(30);
+    stepper_driver.setRunCurrent(50);
     stepper_driver.setHoldCurrent(10);
 }
 
@@ -69,6 +70,26 @@ void checkStatus(const TMC2209::Status &status)
     }
 }
 
+// If the enable pin is not pulled high, restart the ESP32.
+void checkEnablePin()
+{
+    if (!digitalRead(ENABLE_PIN))
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            delay(1);
+            if (digitalRead(ENABLE_PIN))
+            {
+                return;
+            }
+        }
+        stepper_driver.disable();
+        Serial0.println("Stopping!");
+        delay(200);
+        ESP.restart();
+    }
+}
+
 void checkForOverheat()
 {
     // Wait extra time if overheated
@@ -84,6 +105,15 @@ void setup()
 {
     delay(500);
     Serial0.begin(115200);
+    pinMode(ENABLE_PIN, INPUT_PULLDOWN);
+
+    Serial0.print("Waiting for enable to be pulled high...");
+    while (!digitalRead(ENABLE_PIN))
+    {
+        Serial0.print(".");
+        delay(1000);
+    }
+    Serial0.println("\nEnabled! Starting program.");
 
     connectAndSetDefaultConfig();
 
@@ -92,6 +122,8 @@ void setup()
 
 void loop()
 {
+    checkEnablePin();
+
     connected = stepper_driver.isSetupAndCommunicating();
     if (!connected)
     {
