@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "A4988.h"
+#include <SPI.h>
 
 #define MOTOR_STEPS 200
 #define NORMAL_RPM 10
@@ -14,14 +15,18 @@
 // #define MS3 21
 #define SLP 5
 
-// Microstepping mo de
+// Microstepping mode
 #define MICROSTEPS 1
 
 A4988 stepper(MOTOR_STEPS, DIR, STEP, SLP);
+const SPISettings spiSettings(14000000, MSBFIRST, SPI_MODE0);
+uint16_t value;
 
-void setup() {
+void setup()
+{
     Serial.begin(115200);
-    delay(1000);
+    SPI.begin(SCK, MISO, MOSI, 10);
+    delay(5000);
 
     stepper.begin(NORMAL_RPM, MICROSTEPS);
     stepper.setEnableActiveState(HIGH);
@@ -46,7 +51,19 @@ void dispense_pellet() {
     stepper.disable();
 }
 
+uint8_t i = 0;
 void loop() {
+    i++;
+    if (i >= 5)
+    {
+        i = 0;
+        SPI.beginTransaction(spiSettings);
+        Serial.print("Reading value: ");
+        value = SPI.transfer16(0);
+        Serial.println(value);
+        SPI.endTransaction();
+    }
+
     if (Serial.available() > 0) {
         String input = Serial.readStringUntil('\n');
         input.trim();
