@@ -16,19 +16,21 @@ class ESP32Motor:
             print(f"Failed to connect to ESP32 motor controller: {e}")
             return False
         
-    def dispense(self, degrees = 45) -> bool:
+    def dispense(self, dispense) -> bool:
         if not self.ser or not self.ser.is_open:
             print("Not connected to ESP32 motor controller!")
             return False
-        
-        command = f"D{degrees}\n"
+
+        command = f"{dispense}\n"
         self.ser.write(command.encode("ascii"))
         self.ser.flush()
 
         response = self.ser.readline().decode("ascii").strip()
         if response:
             print(f"ESP32 motor response: {response}")
-        return True
+            return True
+        
+        return False
 
     def disconnect(self):
         if self.ser and self.ser.is_open:
