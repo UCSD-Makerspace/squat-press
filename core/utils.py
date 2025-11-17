@@ -62,7 +62,9 @@ def check_all_hardware(pi, ltc, motor):
 def init_threads(linear_sensor, ltc, motor):
     """Initialize and start threads for linear sensor, LTC, and dispenser."""
     event_queue = queue.Queue()
-    linear_thread = LinearSensorThread(linear_sensor, event_queue, 
+    plot_queue = queue.Queue()
+    
+    linear_thread = LinearSensorThread(linear_sensor, event_queue, plot_queue, 
                                        mm_threshold=10, recent_lifts=deque())
     ltc_thread = LTCThread(ltc, event_queue)
     dispenser_thread = DispenserThread(motor, event_queue)

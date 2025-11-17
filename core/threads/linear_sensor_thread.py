@@ -7,19 +7,31 @@ from events import EventType
 Thread to monitor linear sensor for lift detection events.
 """
 class LinearSensorThread(threading.Thread):
-    def __init__(self, linear_sensor, event_queue, mm_threshold=10, recent_lifts: Optional[deque]=None):
+    def __init__(
+            self, 
+            linear_sensor, 
+            event_queue, 
+            plot_queue, 
+            mm_threshold=10, 
+            recent_lifts: Optional[deque]=None
+    ):
         super().__init__(daemon=True)
         self.linear_sensor = linear_sensor
         self.linear_sensor.connect()
+
         self.queue = event_queue
+        self.plot_queue = plot_queue
+
         self.recent_lifts = recent_lifts
         self.threshold = mm_threshold
+
         self.last_mm_value = None
         self.in_lift = False
 
     def run(self):
         while True:
-            mm_value = self.linear_sensor.get_position()
+            mm_value = self.read_mm_value()
+            self.plot_queue.put(mm_value)
 
             # update recent lifts deque
             if self.recent_lifts is not None:
@@ -40,7 +52,7 @@ class LinearSensorThread(threading.Thread):
                         if not self.validate_lift(mm_value):
                             break
 
-                        mm_value = self.linear_sensor.read_mm_value()
+                        mm_value = self.read_mm_value()
 
                         if self.recent_lifts is not None:
                             if len(self.recent_lifts) > 10:
