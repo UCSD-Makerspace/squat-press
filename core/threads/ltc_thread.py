@@ -13,7 +13,7 @@ class LTCThread(threading.Thread):
             current_state = self.LTC.get_detected()
             if current_state != self.last_state:
                 self.last_state = current_state
-                event_type = EventType.PELLET_DISPENSED if current_state else EventType.PELLET_TAKEN
+                event_type = EventType.PELLET_DETECTED if current_state else EventType.PELLET_TAKEN
                 self.queue.put((event_type, current_state, time.time()))
             time.sleep(0.1)
 

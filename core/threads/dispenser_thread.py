@@ -1,6 +1,5 @@
 import threading, time
 from events import EventType
-from rotate import dispense
 
 class DispenserThread(threading.Thread):
     def __init__(self, motor, event_queue):

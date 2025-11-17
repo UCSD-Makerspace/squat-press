@@ -1,4 +1,4 @@
-import Dispenser.TMC2209.tmc2209 as tmc2209
+import dispenser.TMC2209.tmc2209 as tmc2209
 import lx3302a.SENTReader.serial_reader as serial_reader
 import matplotlib.pyplot as plt
 from datetime import datetime
