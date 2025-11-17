@@ -1,9 +1,11 @@
 import csv
 import logging
+import os
 
 from events import EventType
 
 write_path = "home/pi/mice_squat/logs/event_log.csv"
+os.makedirs(os.path.dirname(write_path), exist_ok=True)
 class EventManager:
     def __init__(self, event_queue, dispenser):
         self.q = event_queue
