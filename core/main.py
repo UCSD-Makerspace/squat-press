@@ -1,4 +1,5 @@
 import queue
+import logging
 from collections import deque
 
 import ADC.ADC as ADC
@@ -11,6 +12,9 @@ from core.threads.linear_sensor_plot_thread import PlotThread
 from event_manager import EventManager
 
 from utils import init_hardware, init_pi, check_all_hardware
+
+logging.basicConfig(level=logging.INFO,
+                    format='[%(asctime)s] %(levelname)s: %(message)s')
 
 def main():
     pi, linear_sensor, motor = None, None, None
