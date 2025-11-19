@@ -7,8 +7,8 @@ import pigpio
 import queue
 from collections import deque
 
-from dispenser.ESP32Motor import ESP32Motor
-from dispenser.PhotoInterruptor.PhotoInterruptor import PhotoInterruptor
+from Dispenser.ESP32Motor import ESP32Motor
+from Dispenser.PhotoInterruptor.PhotoInterruptor import PhotoInterruptor
 from lx3302a.SENTReader.serial_reader import LinearSensorReader
 
 from core.threads.dispenser_thread import DispenserThread

@@ -4,8 +4,8 @@ import pigpio
 import time
 import threading
 
-import dispenser.TMC2209.tmc2209 as tmc2209
-from dispenser.PhotoInterruptor.PhotoInterruptor import PhotoInterruptor
+import Dispenser.TMC2209.tmc2209 as tmc2209
+from Dispenser.PhotoInterruptor.PhotoInterruptor import PhotoInterruptor
 import lx3302a.SENTReader.serial_reader as serial_reader
 from rotate import dispense
 
