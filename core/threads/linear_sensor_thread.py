@@ -45,23 +45,15 @@ class LinearSensorThread(threading.Thread):
             if mm_value is not None:
                 self.last_mm_value = mm_value
 
-                if self.validate_lift(mm_value):
+                if self.validate_lift(mm_value) and not self.in_lift:
                     self.queue.put((EventType.LIFT_DETECTED, mm_value, current_time))
 
-                    while True:
-                        if not self.validate_lift(mm_value):
-                            break
-
-                        mm_value = self.read_mm_value()
-
-                        if self.recent_lifts is not None:
-                            if len(self.recent_lifts) > 10:
-                                self.recent_lifts.popleft()
-                            self.recent_lifts.append(mm_value)
-                        
-                        time.sleep(0.01)
-                        
+                elif not self.validate_lift(mm_value) and self.in_lift:
                     self.queue.put((EventType.LIFT_COMPLETED, mm_value, current_time))
+
+                time.sleep(0.01)
+                        
+                    
                     
     def read_mm_value(self):
         return self.linear_sensor.get_position()
