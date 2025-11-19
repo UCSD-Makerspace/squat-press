@@ -69,6 +69,7 @@ void loop() {
         input.trim();
 
         if (input.equalsIgnoreCase("d")) {
+            Serial.println("Dispensing pellet...");
             dispense_pellet(); 
         } else if (input.length() > 0) {
             int degrees = input.toInt();
