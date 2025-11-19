@@ -21,7 +21,7 @@ class EventManager:
                 continue  # just loop again if no events
 
             self.log_event(evt, payload, t)
-            if evt == EventType.LIFT_DETECTED and self.ready_to_dispense:
+            if evt == EventType.LIFT_DETECTED:
                 logging.info("Lift detected, dispensing pellet...")
                 self.dispenser.dispense_pellet()
                 self.ready_to_dispense = False
