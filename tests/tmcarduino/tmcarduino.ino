@@ -134,6 +134,7 @@ void loop()
     status = stepper_driver.getStatus();
     checkStatus(status);
     checkForOverheat();
+    delay(200);
 
     stepper_driver.disableInverseMotorDirection();
     Serial0.println("Moving up");
@@ -165,7 +166,10 @@ void loop()
 
     checkForOverheat();
     stepper_driver.moveAtVelocity(0);
-    delay(2000);
+    delay(1000);
+    checkEnablePin();
+    delay(1000);
+
     stepper_driver.setStandstillMode(TMC2209::StandstillMode::NORMAL);
     delay(6000);
 
