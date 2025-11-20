@@ -14,7 +14,7 @@ class EventManager:
         while True:
             evt, payload, time = self.q.get()
             self.log_event(evt, payload, time)
-            if evt == EventType.LIFT_DETECTED and self.ready_to_dispense:
+            if evt == EventType.LIFT_DETECTED:
                 logging.info("Lift detected, dispensing pellet...")
                 print(f"[DEBUG] Lift detected event received in EventManager")
                 self.dispenser.dispense_pellet()
