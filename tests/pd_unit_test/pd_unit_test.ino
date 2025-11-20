@@ -9,6 +9,8 @@
 // Pin setup
 #define DIR 13
 #define STEP 12
+#define UART_RX 15
+#define UART_TX 14
 
 // #define MS1 22
 // #define MS2 23
@@ -19,35 +21,40 @@
 #define MICROSTEPS 1
 
 A4988 stepper(MOTOR_STEPS, DIR, STEP, SLP);
+HardwareSerial SerialUART(1);
+
 const SPISettings spiSettings(14000000, MSBFIRST, SPI_MODE0);
 uint16_t value;
 
 void setup()
 {
-    Serial.begin(115200);
+    SerialUART.begin(115200);
     SPI.begin(SCK, MISO, MOSI, 10);
+    HardwareSerial SerialUART(1);
+    SerialUART.begin(115200, SERIAL_8N1, UART_RX, UART_TX);
+
     delay(5000);
 
     stepper.begin(NORMAL_RPM, MICROSTEPS);
     stepper.setEnableActiveState(HIGH);
     stepper.disable();
 
-    Serial.println("Stepper ready.");
+    SerialUART.println("Stepper ready.");
     delay(1000);
 }
 
 void dispense_pellet() {
     stepper.enable();
     delay(50);
-    Serial.println("Pellet dispense begun");
+    SerialUART.println("Pellet dispense begun");
     stepper.setRPM(NORMAL_RPM);
     stepper.rotate(55);
-    Serial.println("Rotated 55 degrees");
+    SerialUART.println("Rotated 55 degrees");
 
     delay(100); // experiment with this timing. we want this as fast as possible
-    stepper.setRPM(FAST_RPM);
+    stepper.setRPM(NORMAL_RPM);
     stepper.rotate(-10);
-    Serial.println("Rotated -10 degrees");
+    SerialUART.println("Rotated -10 degrees");
     stepper.disable();
 }
 
@@ -58,24 +65,24 @@ void loop() {
     {
         i = 0;
         SPI.beginTransaction(spiSettings);
-        Serial.print("Reading value: ");
+        SerialUART.print("Reading value: ");
         value = SPI.transfer16(0);
-        Serial.println(value);
+        SerialUART.println(value);
         SPI.endTransaction();
     }
 
-    if (Serial.available() > 0) {
-        String input = Serial.readStringUntil('\n');
+    if (SerialUART.available() > 0) {
+        String input = SerialUART.readStringUntil('\n');
         input.trim();
 
         if (input.equalsIgnoreCase("d")) {
-            Serial.println("Dispensing pellet...");
+            SerialUART.println("Dispensing pellet..."); 
             dispense_pellet(); 
         } else if (input.length() > 0) {
             int degrees = input.toInt();
 
-            Serial.print("Received command: ");
-            Serial.println(degrees);
+            SerialUART.print("Received command: ");
+            SerialUART.println(degrees);
 
             stepper.rotate(degrees);
         }

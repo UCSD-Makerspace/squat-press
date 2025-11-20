@@ -21,7 +21,7 @@ def init_hardware(pi):
     linear_sensor, ltc, motor = None, None, None
     try:
         logging.info("Initializing linear sensor...")
-        linear_sensor = LinearSensorReader('/dev/ttyACM0', 115200)
+        linear_sensor = LinearSensorReader('/dev/ttyS0', 115200)
 
         if not linear_sensor.connect():
             raise Exception("Failed to connect to linear sensor")
@@ -30,7 +30,7 @@ def init_hardware(pi):
         ltc = PhotoInterruptor(pi)
 
         logging.info("Initializing motor...")
-        motor = ESP32Motor(port = "/dev/ttyACM1", baudrate=115200)
+        motor = ESP32Motor(port = "/dev/serial0", baudrate=115200)
         if not motor.connect():
             raise Exception("Failed to connect to motor")
 
