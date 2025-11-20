@@ -2,11 +2,7 @@ import serial
 import time
 
 class ESP32Motor:
-<<<<<<< HEAD
-    def __init__(self, port = "/dev/serial0", baudrate = 115200):
-=======
     def __init__(self, port = "/dev/ttyUSB0", baudrate = 115200):
->>>>>>> parent of 8178981 (Merge remote-tracking branch 'origin/dev' into dev)
         self.port = port
         self.baudrate = baudrate
         self.ser = None
