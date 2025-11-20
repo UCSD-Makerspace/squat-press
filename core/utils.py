@@ -7,8 +7,8 @@ import pigpio
 import queue
 from collections import deque
 
-from dispenser.ESP32Motor import ESP32Motor
-from dispenser.PhotoInterruptor.PhotoInterruptor import PhotoInterruptor
+from Dispenser.ESP32Motor import ESP32Motor
+from Dispenser.PhotoInterruptor.PhotoInterruptor import PhotoInterruptor
 from lx3302a.SENTReader.serial_reader import LinearSensorReader
 
 from core.threads.dispenser_thread import DispenserThread
@@ -30,11 +30,7 @@ def init_hardware(pi):
         ltc = PhotoInterruptor(pi)
 
         logging.info("Initializing motor...")
-<<<<<<< HEAD
-        motor = ESP32Motor(port = "/dev/serial0", baudrate=115200)
-=======
         motor = ESP32Motor(port = "/dev/ttyUSB0", baudrate=115200)
->>>>>>> parent of 8178981 (Merge remote-tracking branch 'origin/dev' into dev)
         if not motor.connect():
             raise Exception("Failed to connect to motor")
 

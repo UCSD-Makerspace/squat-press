@@ -3,12 +3,7 @@ import logging
 
 from events import EventType
 
-<<<<<<< HEAD
-write_path = "/home/mice/mice-squat/logs/event_log.csv"
-os.makedirs(os.path.dirname(write_path), exist_ok=True)
-=======
-write_path = "home/pi/mice_squat/logs/event_log.csv"
->>>>>>> parent of 8178981 (Merge remote-tracking branch 'origin/dev' into dev)
+write_path = "/home/pi/mice-squat/logs/event_log.csv"
 class EventManager:
     def __init__(self, event_queue, dispenser):
         self.q = event_queue
