@@ -1,12 +1,14 @@
 import csv
 import logging
-import os
-import queue
 
 from events import EventType
 
+<<<<<<< HEAD
 write_path = "/home/mice/mice-squat/logs/event_log.csv"
 os.makedirs(os.path.dirname(write_path), exist_ok=True)
+=======
+write_path = "home/pi/mice_squat/logs/event_log.csv"
+>>>>>>> parent of 8178981 (Merge remote-tracking branch 'origin/dev' into dev)
 class EventManager:
     def __init__(self, event_queue, dispenser):
         self.q = event_queue
@@ -15,13 +17,9 @@ class EventManager:
 
     def run(self):
         while True:
-            try:
-                evt, payload, t = self.q.get(timeout=1)
-            except queue.Empty:
-                continue  # just loop again if no events
-
-            self.log_event(evt, payload, t)
-            if evt == EventType.LIFT_DETECTED:
+            evt, payload, time = self.q.get()
+            self.log_event(evt, payload, time)
+            if evt == EventType.LIFT_DETECTED and self.ready_to_dispense:
                 logging.info("Lift detected, dispensing pellet...")
                 self.dispenser.dispense_pellet()
                 self.ready_to_dispense = False

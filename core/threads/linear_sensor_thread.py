@@ -62,10 +62,6 @@ class LinearSensorThread(threading.Thread):
                         time.sleep(0.01)
                         
                     self.queue.put((EventType.LIFT_COMPLETED, mm_value, current_time))
-
-                time.sleep(0.01)
-                        
-                    
                     
     def read_mm_value(self):
         return self.linear_sensor.get_position()
@@ -87,7 +83,6 @@ class LinearSensorThread(threading.Thread):
             return False
         
         avg_slope = self.calculate_avg_slope()
-        print(f"[DEBUG] mm_value={mm_value}, avg_slope={avg_slope}, in_lift={self.in_lift}")
 
         if avg_slope >= 0.1 and mm_value > self.threshold:
             self.in_lift = True

@@ -3,7 +3,7 @@ __pycache__/
 *.py[codz]
 *$py.class
 
-logs/*
+logs/
 electrical/
 
 # C extensions

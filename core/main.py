@@ -1,5 +1,4 @@
 import queue
-import logging
 from collections import deque
 
 import ADC.ADC as ADC
@@ -13,9 +12,6 @@ from event_manager import EventManager
 
 from utils import init_hardware, init_pi, check_all_hardware
 
-logging.basicConfig(level=logging.INFO,
-                    format='[%(asctime)s] %(levelname)s: %(message)s')
-
 def main():
     pi, linear_sensor, motor = None, None, None
 
@@ -28,12 +24,12 @@ def main():
 
     linear_thread = LinearSensorThread(linear_sensor, event_queue, 
                         plot_queue, mm_threshold=10, recent_lifts=deque())
-    # ltc_thread = LTCThread(ltc, event_queue)
+    ltc_thread = LTCThread(ltc, event_queue)
     dispenser_thread = DispenserThread(motor, event_queue)
     plot_thread = PlotThread(plot_queue, sample_window=200)
 
     linear_thread.start()
-    # ltc_thread.start()
+    ltc_thread.start()
     dispenser_thread.start()
     plot_thread.start()
     
