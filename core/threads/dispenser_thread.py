@@ -9,4 +9,5 @@ class DispenserThread(threading.Thread):
 
     def dispense_pellet(self):
         self.motor.dispense("D")
+        print(f"[DEBUG] Pellet dispensed in dispenser thread")
         self.queue.put((EventType.PELLET_DISPENSED, None, time.time()))

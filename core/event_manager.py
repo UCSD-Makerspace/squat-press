@@ -16,11 +16,13 @@ class EventManager:
             self.log_event(evt, payload, time)
             if evt == EventType.LIFT_DETECTED and self.ready_to_dispense:
                 logging.info("Lift detected, dispensing pellet...")
+                print(f"[DEBUG] Lift detected event received in EventManager")
                 self.dispenser.dispense_pellet()
                 self.ready_to_dispense = False
 
             elif evt == EventType.PELLET_TAKEN:
                 logging.info("Pellet taken, ready for next lift.")
+                print(f"[DEBUG] Pellet taken event received in EventManager")
                 self.ready_to_dispense = True
 
     def log_event(self, evt, payload, t):
