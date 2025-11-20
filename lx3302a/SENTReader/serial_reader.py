@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 
 class LinearSensorReader:
-    def __init__(self, port='COM3', baudrate=115200):
+    def __init__(self, port, baudrate=115200):
         self.port = port
         self.baudrate = baudrate
         self.ser = None

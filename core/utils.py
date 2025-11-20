@@ -21,7 +21,7 @@ def init_hardware(pi):
     linear_sensor, ltc, motor = None, None, None
     try:
         logging.info("Initializing linear sensor...")
-        linear_sensor = LinearSensorReader('/dev/ttyS0', 115200)
+        linear_sensor = LinearSensorReader('/dev/ttyACM0', 115200)
 
         if not linear_sensor.connect():
             raise Exception("Failed to connect to linear sensor")
