@@ -3,7 +3,7 @@ import logging
 
 from events import EventType
 
-write_path = "/home/pi/mice-squat/logs/event_log.csv"
+write_path = "/home/mice/mice-squat/logs/event_log.csv"
 class EventManager:
     def __init__(self, event_queue, dispenser):
         self.q = event_queue

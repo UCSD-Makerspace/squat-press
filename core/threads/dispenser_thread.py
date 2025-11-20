@@ -8,5 +8,5 @@ class DispenserThread(threading.Thread):
         self.queue = event_queue
 
     def dispense_pellet(self):
-        self.motor.dispense()
+        self.motor.dispense("D")
         self.queue.put((EventType.PELLET_DISPENSED, None, time.time()))
