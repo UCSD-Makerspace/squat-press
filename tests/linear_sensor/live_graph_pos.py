@@ -18,7 +18,7 @@ def check_mm_value(sensor: serial_reader.LinearSensorReader, last_val: Optional[
     return last_val, last_raw_val
 
 def main():
-    sensor = serial_reader.LinearSensorReader("/dev/ttyACM0", 115200)
+    sensor = serial_reader.LinearSensorReader("/dev/ttyACM1", 115200)
     if not sensor.connect():
         raise Exception("Failed to connect to linear sensor")
 
