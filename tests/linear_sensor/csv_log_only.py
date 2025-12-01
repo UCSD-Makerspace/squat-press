@@ -41,8 +41,12 @@ def main():
                 prev_mm_value = mm_value
                 elapsed = time.time() - start_time
 
+                elapsed = round(elapsed, 3)
+                mm_value = round(mm_value, 3)
+
                 csv_writer.writerow([elapsed, mm_value, raw_val])
-                csv_file.flush()          
+                csv_file.flush()    
+                time.sleep(0.025)      
 
     except KeyboardInterrupt:
         print("\nStopped by user")
