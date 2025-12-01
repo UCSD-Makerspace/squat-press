@@ -37,7 +37,7 @@ def main():
         while True:
             mm_value, raw_val = check_mm_value(sensor, mm_value, raw_val)
 
-            if mm_value is not None and mm_value != prev_mm_value:
+            if mm_value is not None:
                 prev_mm_value = mm_value
                 elapsed = time.time() - start_time
 

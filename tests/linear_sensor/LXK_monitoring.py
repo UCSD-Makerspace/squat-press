@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 
 class LinearSensorReader:
-    def __init__(self, port='COM3', baudrate=115200):
+    def __init__(self, port, baudrate=115200):
         self.port = port
         self.baudrate = baudrate
         self.ser = None
@@ -133,11 +133,13 @@ class LinearSensorReader:
 
                 if raw_value is not None:
                     mm_value = self.interpolate(raw_value)
+                    if not mm_value:
+                        continue
                     recent_pos.append(mm_value)
                     if len(recent_pos) > filter_window:
                         recent_pos.pop(0)
 
-                    filtered_value = sum(recent_pos) / len(recent_pos)
+                    filtered_value = sum(recent_pos) / len(recent_pos):
                     if abs(mm_value - filtered_value) > noise_threshold:
                         display_value = filtered_value  
                     else:
@@ -154,7 +156,7 @@ class LinearSensorReader:
             self.running = False
 
 if __name__ == "__main__":
-    sensor = LinearSensorReader('COM3', 19200)
+    sensor = LinearSensorReader('/dev/tty/ACM1', 19200)
 
     if sensor.connect():
         print("\n=== Testing Commands ===")
