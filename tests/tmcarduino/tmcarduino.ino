@@ -39,12 +39,14 @@ void connectAndSetDefaultConfig()
     Serial0.println("\nConnected!\n");
     delay(500);
 
-    stepper_driver.setMicrostepsPerStep(1);
+    // 1 -> 16 for smaller microsteps to attempt to reduce drift
+    stepper_driver.setMicrostepsPerStep(16);
     stepper_driver.enableAutomaticCurrentScaling();
     stepper_driver.disableStealthChop();
     stepper_driver.setStandstillMode(TMC2209::StandstillMode::BRAKING);
     stepper_driver.setRunCurrent(50);
-    stepper_driver.setHoldCurrent(10);
+    // change from 10 -> 40 to resist slow drift
+    stepper_driver.setHoldCurrent(40);
 }
 
 void checkStatus(const TMC2209::Status &status)
