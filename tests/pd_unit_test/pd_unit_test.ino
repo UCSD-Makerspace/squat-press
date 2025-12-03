@@ -76,10 +76,7 @@ void loop() {
         input.trim();
 
         if (input.equalsIgnoreCase("d")) {
-<<<<<<< HEAD
             SerialUART.println("Dispensing pellet..."); 
-=======
->>>>>>> parent of 8178981 (Merge remote-tracking branch 'origin/dev' into dev)
             dispense_pellet(); 
         } else if (input.length() > 0) {
             int degrees = input.toInt();
