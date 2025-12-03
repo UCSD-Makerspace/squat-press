@@ -123,6 +123,7 @@ void setup()
 
 void loop()
 {
+    stepper_driver.disableStealthChop();
     checkEnablePin();
 
     connected = stepper_driver.isSetupAndCommunicating();
@@ -159,21 +160,36 @@ void loop()
     for (int i = 0; i < NUM_STEPS; i++)
     {
         stepper_driver.moveAtVelocity(velocities[i]);
-        delay(waitTimesMs[i] / 2);
+        delay(waitTimesMs[i] * 0.75);
         status = stepper_driver.getStatus();
         checkStatus(status);
-        delay(waitTimesMs[i] / 2);
     }
-
-    checkForOverheat();
     stepper_driver.moveAtVelocity(0);
-    delay(1000);
+    delay(100);
+    stepper_driver.setRunCurrent(5);
+    stepper_driver.enableStealthChop();
+    stepper_driver.setStallGuardThreshold(100);
+    stepper_driver.moveAtVelocity(250 * MICROSTEP_VALUE);
+    delay(50);
+    int timeElapsedMS = 0;
+    uint16_t sgStatus;
+    while (timeElapsedMS < 2000)
+    {
+        status = stepper_driver.getStatus();
+        sgStatus = stepper_driver.getStallGuardResult();
+        Serial0.printf("SG: %d\n", sgStatus);
+        if (sgStatus < 100)
+        {
+            break;
+        }
+        delay(5);
+    }
+    stepper_driver.disableStealthChop();
+
+    stepper_driver.moveAtVelocity(0);
+    stepper_driver.disable();
+    checkForOverheat();
     checkEnablePin();
-    delay(1000);
-
-    stepper_driver.setStandstillMode(TMC2209::StandstillMode::NORMAL);
-    delay(6000);
-
     // Kill program entirely if shutdown
     if (overheated_shutdown)
     {
@@ -183,6 +199,8 @@ void loop()
             delay(10000);
         }
     }
-
+    delay(2000);
+    stepper_driver.enable();
     stepper_driver.setStandstillMode(TMC2209::StandstillMode::BRAKING);
+    stepper_driver.setRunCurrent(50);
 }
