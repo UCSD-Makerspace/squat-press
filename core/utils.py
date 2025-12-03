@@ -9,7 +9,7 @@ from collections import deque
 
 from Dispenser.ESP32Motor import ESP32Motor
 from Dispenser.PhotoInterruptor.PhotoInterruptor import PhotoInterruptor
-from lx3302a.SENTReader.serial_reader import LinearSensorReader
+from Dispenser.LinearSensor.serial_reader import LinearSensorReader
 
 from core.threads.dispenser_thread import DispenserThread
 from core.threads.linear_sensor_thread import LinearSensorThread

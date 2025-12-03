@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load the data
-filename = 'data.csv'
+filename = 'data_12.3_trial7.csv'
 try:
     df = pd.read_csv(filename)
 except FileNotFoundError:
@@ -15,7 +15,7 @@ print(f"Loaded {len(df)} data points.")
 # Define thresholds to identify 'static' states
 # We assume 'Bottom' is near 0.0 and 'Top' is near the max extension
 BOTTOM_THRESHOLD_MM = 0.1
-TOP_THRESHOLD_MM = 20.0 
+TOP_THRESHOLD_MM = 19.5 
 
 # --- FILTER DATA ---
 # Filter data where the sensor is sitting at the bottom
