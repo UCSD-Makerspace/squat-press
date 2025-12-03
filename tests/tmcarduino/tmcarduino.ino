@@ -15,7 +15,8 @@ bool overheated_shutdown = false;
 
 TMC2209::Status status;
 constexpr int NUM_STEPS = 9;
-const int velocities[NUM_STEPS] = {250, 500, 1000, 1500, 2000, 3000, 4000, 2000, 500};
+constexpr int MICROSTEP_MODE = 16;
+const int velocities[NUM_STEPS] = {250 * MICROSTEP_MODE, 500 * MICROSTEP_MODE, 1000 * MICROSTEP_MODE, 1500, 2000, 3000, 4000, 2000, 500};
 const int waitTimesMs[NUM_STEPS] = {60, 60, 40, 40, 40, 40, 50, 40, 40};
 
 void connectAndSetDefaultConfig()
@@ -39,14 +40,12 @@ void connectAndSetDefaultConfig()
     Serial0.println("\nConnected!\n");
     delay(500);
 
-    // 1 -> 16 for smaller microsteps to attempt to reduce drift
-    stepper_driver.setMicrostepsPerStep(16);
+    stepper_driver.setMicrostepsPerStep(MICROSTEP_MODE);
     stepper_driver.enableAutomaticCurrentScaling();
     stepper_driver.disableStealthChop();
     stepper_driver.setStandstillMode(TMC2209::StandstillMode::BRAKING);
     stepper_driver.setRunCurrent(50);
-    // change from 10 -> 40 to resist slow drift
-    stepper_driver.setHoldCurrent(40);
+    stepper_driver.setHoldCurrent(20);
 }
 
 void checkStatus(const TMC2209::Status &status)
