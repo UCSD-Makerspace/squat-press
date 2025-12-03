@@ -139,7 +139,7 @@ class LinearSensorReader:
                     if len(recent_pos) > filter_window:
                         recent_pos.pop(0)
 
-                    filtered_value = sum(recent_pos) / len(recent_pos):
+                    filtered_value = sum(recent_pos) / len(recent_pos)
                     if abs(mm_value - filtered_value) > noise_threshold:
                         display_value = filtered_value  
                     else:
