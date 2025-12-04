@@ -1,4 +1,4 @@
-import lx3302a.SENTReader.serial_reader as serial_reader
+import Dispenser.LinearSensor.serial_reader as serial_reader
 import matplotlib.pyplot as plt
 from datetime import datetime
 import time
