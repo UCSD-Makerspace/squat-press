@@ -1,12 +1,20 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 # Load the data
-filename = 'data_12.3_trial7.csv'
+filename = '1_8_26 trial1.csv'
 try:
     df = pd.read_csv(filename)
 except FileNotFoundError:
     print(f"Error: {filename} not found. Please ensure the file is in the same directory.")
+    exit()
+
+# Basic validation of required columns
+required_cols = {'time_s', 'position_mm', 'raw_value'}
+missing = required_cols - set(df.columns)
+if missing:
+    print(f"Error: missing required columns: {missing}. Aborting.")
     exit()
 
 print(f"Loaded {len(df)} data points.")
@@ -14,15 +22,42 @@ print(f"Loaded {len(df)} data points.")
 # --- CONFIGURATION ---
 # Define thresholds to identify 'static' states
 # We assume 'Bottom' is near 0.0 and 'Top' is near the max extension
-BOTTOM_THRESHOLD_MM = 0.1
-TOP_THRESHOLD_MM = 19.5 
+BOTTOM_THRESHOLD_MM = 0.05
+TOP_THRESHOLD_MM = 21.5 
+VELOCITY_THRESHOLD = 0.1 # mm/s: samples with |velocity| <= this are considered static
 
 # --- FILTER DATA ---
-# Filter data where the sensor is sitting at the bottom
-bottom_dwell = df[df['position_mm'] <= BOTTOM_THRESHOLD_MM]
+# Compute instantaneous velocity (mm/s) for every sample.
+# Use np.gradient to get a full-length derivative (handles endpoints).
+time = df['time_s'].to_numpy()
+pos = df['position_mm'].to_numpy()
+with np.errstate(divide='ignore', invalid='ignore'):
+    velocity = np.gradient(pos, time)
+df['velocity_mm_s'] = velocity
 
-# Filter data where the sensor is holding at the top
-top_dwell = df[df['position_mm'] >= TOP_THRESHOLD_MM]
+# Identify candidate dwell samples by position, then keep only those with low velocity
+bottom_candidates = df[df['position_mm'] <= BOTTOM_THRESHOLD_MM]
+top_candidates = df[df['position_mm'] >= TOP_THRESHOLD_MM]
+
+bottom_dwell = bottom_candidates[bottom_candidates['velocity_mm_s'].abs() <= VELOCITY_THRESHOLD]
+top_dwell = top_candidates[top_candidates['velocity_mm_s'].abs() <= VELOCITY_THRESHOLD]
+
+print(f"Bottom candidates: {len(bottom_candidates)} -> static after velocity filter: {len(bottom_dwell)}")
+print(f"Top candidates:    {len(top_candidates)} -> static after velocity filter: {len(top_dwell)}")
+
+# --- DIAGNOSTICS ---
+print('\nVelocity statistics (mm/s):')
+print(df['velocity_mm_s'].describe())
+
+print('\nGlobal counts for velocity thresholds:')
+for thr in [VELOCITY_THRESHOLD, 1e-6, 1e-5, 0.1]:
+    print(f"  abs(vel) <= {thr}:", (df['velocity_mm_s'].abs() <= thr).sum())
+
+print('\nCounts within position candidates:')
+print('  bottom_candidates total:', len(bottom_candidates))
+print('  bottom_candidates abs<=VELOCITY_THRESHOLD:', (bottom_candidates['velocity_mm_s'].abs() <= VELOCITY_THRESHOLD).sum())
+print('  top_candidates total:', len(top_candidates))
+print('  top_candidates abs<=VELOCITY_THRESHOLD:', (top_candidates['velocity_mm_s'].abs() <= VELOCITY_THRESHOLD).sum())
 
 # --- CALCULATE STATISTICS ---
 def print_stats(name, data_slice):
@@ -49,7 +84,7 @@ def print_stats(name, data_slice):
     print(f"Raw Value:  Mean={raw_mean:.2f}    | StdDev={raw_std:.2f}    | Pk-Pk={raw_peak_to_peak:.2f}")
 
 print_stats("BOTTOM DWELL (0mm)", bottom_dwell)
-print_stats("TOP DWELL (~22mm)", top_dwell)
+print_stats("TOP DWELL (~21.5mm)", top_dwell)
 
 # --- PLOTTING ---
 fig, axes = plt.subplots(2, 2, figsize=(12, 10))
