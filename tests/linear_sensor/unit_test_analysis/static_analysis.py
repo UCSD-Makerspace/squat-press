@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Load the data
-filename = '1_8_26 trial1.csv'
+filename = 'data_1_8_26_trial1.csv'
 try:
     df = pd.read_csv(filename)
 except FileNotFoundError:
@@ -25,6 +25,9 @@ print(f"Loaded {len(df)} data points.")
 BOTTOM_THRESHOLD_MM = 0.05
 TOP_THRESHOLD_MM = 21.5 
 VELOCITY_THRESHOLD = 0.1 # mm/s: samples with |velocity| <= this are considered static
+# Smoothing and dwell parameters
+VEL_SMOOTH_WINDOW = 5           # samples for rolling median of velocity (odd preferred)
+MIN_DWELL_DURATION_S = 0.1      # minimum time (s) a run must be below velocity threshold to count as a dwell
 
 # --- FILTER DATA ---
 # Compute instantaneous velocity (mm/s) for every sample.
@@ -36,14 +39,42 @@ with np.errstate(divide='ignore', invalid='ignore'):
 df['velocity_mm_s'] = velocity
 
 # Identify candidate dwell samples by position, then keep only those with low velocity
+# Smooth the absolute velocity with a centered rolling median to avoid single-sample transients
+vel_abs_sm = df['velocity_mm_s'].abs().rolling(window=VEL_SMOOTH_WINDOW, center=True, min_periods=1).median()
+
+# Boolean mask of slow samples after smoothing
+is_slow = vel_abs_sm <= VELOCITY_THRESHOLD
+
+# Determine minimum sample count corresponding to MIN_DWELL_DURATION_S
+median_dt = df['time_s'].diff().median()
+if np.isnan(median_dt) or median_dt <= 0:
+    min_samples = 1
+else:
+    min_samples = max(1, int(np.ceil(MIN_DWELL_DURATION_S / median_dt)))
+
+# Find contiguous runs of `is_slow` and only keep runs long enough
+accepted_slow = pd.Series(False, index=df.index)
+if is_slow.any():
+    # group id increments when is_slow changes
+    grp = (is_slow != is_slow.shift(fill_value=False)).cumsum()
+    for gid, idxs in df.groupby(grp).groups.items():
+        # groups where is_slow at first index is True are candidate slow runs
+        first_idx = idxs[0]
+        if is_slow.loc[first_idx]:
+            run_len = len(idxs)
+            if run_len >= min_samples:
+                accepted_slow.iloc[idxs] = True
+
+# Identify candidate dwell samples by position, then keep only those inside accepted slow runs
 bottom_candidates = df[df['position_mm'] <= BOTTOM_THRESHOLD_MM]
 top_candidates = df[df['position_mm'] >= TOP_THRESHOLD_MM]
 
-bottom_dwell = bottom_candidates[bottom_candidates['velocity_mm_s'].abs() <= VELOCITY_THRESHOLD]
-top_dwell = top_candidates[top_candidates['velocity_mm_s'].abs() <= VELOCITY_THRESHOLD]
+bottom_dwell = bottom_candidates[accepted_slow.loc[bottom_candidates.index]]
+top_dwell = top_candidates[accepted_slow.loc[top_candidates.index]]
 
-print(f"Bottom candidates: {len(bottom_candidates)} -> static after velocity filter: {len(bottom_dwell)}")
-print(f"Top candidates:    {len(top_candidates)} -> static after velocity filter: {len(top_dwell)}")
+print(f"Bottom candidates: {len(bottom_candidates)} -> static after velocity filter & min-duration: {len(bottom_dwell)}")
+print(f"Top candidates:    {len(top_candidates)} -> static after velocity filter & min-duration: {len(top_dwell)}")
+print(f"median_dt={median_dt:.6f}s -> min_samples={min_samples}; VEL_SMOOTH_WINDOW={VEL_SMOOTH_WINDOW}")
 
 # --- DIAGNOSTICS ---
 print('\nVelocity statistics (mm/s):')
@@ -98,7 +129,7 @@ axes[0, 0].set_xlabel('Time (s)')
 axes[0, 0].grid(True, alpha=0.3)
 
 # 2. Histogram of Raw Value at Bottom
-axes[0, 1].hist(bottom_dwell['raw_value'], bins=30, color='blue', alpha=0.7)
+axes[0, 1].hist(bottom_dwell['raw_value'], bins=400, color='blue', alpha=0.7)
 axes[0, 1].set_title('Distribution of Raw Values (Bottom)')
 axes[0, 1].set_xlabel('Raw Sensor Value')
 axes[0, 1].set_ylabel('Frequency')
@@ -111,10 +142,12 @@ axes[1, 0].set_xlabel('Time (s)')
 axes[1, 0].grid(True, alpha=0.3)
 
 # 4. Histogram of Raw Value at Top
-axes[1, 1].hist(top_dwell['raw_value'], bins=30, color='orange', alpha=0.7)
+axes[1, 1].hist(top_dwell['raw_value'], bins=400, color='orange', alpha=0.7)
 axes[1, 1].set_title('Distribution of Raw Values (Top)')
 axes[1, 1].set_xlabel('Raw Sensor Value')
 axes[1, 1].set_ylabel('Frequency')
 
 plt.tight_layout()
+plt.savefig('static_noise_analysis.png')
+print("Saved figure to static_noise_analysis.png")
 plt.show()

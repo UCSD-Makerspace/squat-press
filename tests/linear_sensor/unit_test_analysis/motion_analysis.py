@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-filename = 'data_12.3_trial7.csv'
+filename = '1_8_26 trial1.csv'
 try:
     df = pd.read_csv(filename)
 except FileNotFoundError:
