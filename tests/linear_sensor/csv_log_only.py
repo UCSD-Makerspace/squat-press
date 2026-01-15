@@ -5,6 +5,8 @@ import time
 import csv
 from typing import Optional
 
+sample_rates = [25, 50, 100, 200]
+
 def check_mm_value(sensor: serial_reader.LinearSensorReader, last_val: Optional[float], last_raw_val: Optional[float]):
     """Return (interpolated mm, raw decimal value)"""
     raw_val = sensor.send_command('F')
@@ -46,7 +48,7 @@ def main():
 
                 csv_writer.writerow([elapsed, mm_value, raw_val])
                 csv_file.flush()    
-                time.sleep(0.025)      
+                time.sleep(1.0 / sample_rates[0])      
 
     except KeyboardInterrupt:
         print("\nStopped by user")
