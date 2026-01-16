@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 
 class LinearSensorReader:
-    def __init__(self, port, baudrate=115200):
+    def __init__(self, port, baudrate):
         self.port = port
         self.baudrate = baudrate
         self.ser = None
@@ -84,7 +84,7 @@ class LinearSensorReader:
         
         if response:
             try:
-                hex_part = response.split()[0]  # Get "04A3" part
+                hex_part = response.split()[0]
                 decimal_value = int(hex_part, 16)
                 return decimal_value, response
             except:
@@ -156,7 +156,7 @@ class LinearSensorReader:
             self.running = False
 
 if __name__ == "__main__":
-    sensor = LinearSensorReader('/dev/tty/ACM1', 19200)
+    sensor = LinearSensorReader("/dev/ttyACM0", 115200)
 
     if sensor.connect():
         print("\n=== Testing Commands ===")

@@ -1,8 +1,8 @@
 import queue
 from collections import deque
 
-import ADC.ADC as ADC
-import lx3302a.SENTReader.serial_reader as serial_reader
+import Dispenser.ADC.ADC as ADC
+import Dispenser.LinearSensor.serial_reader as serial_reader
 
 from core.threads.dispenser_thread import DispenserThread
 from core.threads.linear_sensor_thread import LinearSensorThread
