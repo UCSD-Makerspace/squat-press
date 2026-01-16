@@ -1,9 +1,6 @@
 import queue
 from collections import deque
 
-import Dispenser.ADC.ADC as ADC
-import Dispenser.LinearSensor.serial_reader as serial_reader
-
 from core.threads.dispenser_thread import DispenserThread
 from core.threads.linear_sensor_thread import LinearSensorThread
 from core.threads.ltc_thread import LTCThread
