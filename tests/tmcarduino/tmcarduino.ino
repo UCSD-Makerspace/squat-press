@@ -9,6 +9,9 @@ const int TX_PIN = 17;
 const uint8_t REPLY_DELAY = 4;
 const int ENABLE_PIN = 19;
 
+const int GREEN_LED_PIN = 2;
+const int RED_LED_PIN = 4;
+
 bool connected = false;
 bool overheated = false;
 bool overheated_shutdown = false;
@@ -102,11 +105,28 @@ void checkForOverheat()
     }
 }
 
+void indicateMoving()
+{
+    digitalWrite(GREEN_LED_PIN, HIGH);
+    digitalWrite(RED_LED_PIN, LOW);
+}
+
+void indicateStopped()
+{
+    digitalWrite(GREEN_LED_PIN, LOW);
+    digitalWrite(RED_LED_PIN, HIGH);
+}
+
 void setup()
 {
     delay(500);
     Serial0.begin(115200);
     pinMode(ENABLE_PIN, INPUT_PULLDOWN);
+    pinMode(GREEN_LED_PIN, OUTPUT);
+    pinMode(RED_LED_PIN, OUTPUT);
+
+    digital_write(GREEN_LED_PIN, LOW);
+    digital_write(RED_LED_PIN, HIGH);
 
     Serial0.print("Waiting for enable to be pulled high...");
     while (!digitalRead(ENABLE_PIN))
@@ -140,6 +160,7 @@ void loop()
 
     stepper_driver.disableInverseMotorDirection();
     Serial0.println("Moving up");
+    indicateMoving();
     for (int i = 0; i < NUM_STEPS; i++)
     {
         stepper_driver.moveAtVelocity(velocities[i]);
@@ -188,6 +209,7 @@ void loop()
 
     stepper_driver.moveAtVelocity(0);
     stepper_driver.disable();
+    indicateStopped();
     checkForOverheat();
     checkEnablePin();
     // Kill program entirely if shutdown
