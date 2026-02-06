@@ -133,7 +133,7 @@ class LinearSensorReader:
 
                 if raw_value is not None:
                     mm_value = self.interpolate(raw_value)
-                    if not mm_value:
+                    if mm_value is None:
                         continue
                     recent_pos.append(mm_value)
                     if len(recent_pos) > filter_window:

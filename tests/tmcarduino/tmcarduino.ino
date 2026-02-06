@@ -125,8 +125,8 @@ void setup()
     pinMode(GREEN_LED_PIN, OUTPUT);
     pinMode(RED_LED_PIN, OUTPUT);
 
-    digital_write(GREEN_LED_PIN, LOW);
-    digital_write(RED_LED_PIN, HIGH);
+    digitalWrite(GREEN_LED_PIN, LOW);
+    digitalWrite(RED_LED_PIN, HIGH);
 
     Serial0.print("Waiting for enable to be pulled high...");
     while (!digitalRead(ENABLE_PIN))
