@@ -56,6 +56,12 @@ def main():
     GPIO.setup(SYNC_GPIO_PIN, GPIO.IN)
     GPIO.add_event_detect(SYNC_GPIO_PIN, GPIO.BOTH, callback=sync_callback, bouncetime=50)
 
+    print("Testing GPIO 21 state:")
+    for i in range(20):
+        state = GPIO.input(SYNC_GPIO_PIN)
+        print(f"GPIO 21: {state}")
+        time.sleep(0.1)
+
     # --- Setup CSV logging ---
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_file = open(f"sensor_log_{timestamp}.csv", "w", newline="")
