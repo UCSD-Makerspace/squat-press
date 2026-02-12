@@ -44,7 +44,7 @@ def check_mm_value(sensor: serial_reader.LinearSensorReader, last_val: Optional[
     return last_val, last_raw_val
 
 def main():
-    global cycle_start_time, cycle_count
+    global cycle_start_time, cycle_count, in_cycle
 
     # --- Connect to sensor ---
     sensor = serial_reader.LinearSensorReader("/dev/ttyACM0", 115200)
@@ -62,11 +62,8 @@ def main():
     csv_writer = csv.writer(csv_file)
     csv_writer.writerow(["time_s", "position_mm", "raw_value"])
 
-    start_time = time.time()
-
     mm_value = None
     raw_val = None
-    prev_mm_value = 0
 
     try:
         while True:
@@ -77,13 +74,12 @@ def main():
                 current_start_time = cycle_start_time
                 current_cycle = cycle_count
 
-            if currently_in_cycle and mm_value is not None:
-                prev_mm_value = mm_value
-                elapsed = time.time() - start_time
+            if currently_in_cycle and mm_value is not None and current_start_time is not None:
+                elapsed = time.time() - current_start_time
                 elapsed = round(elapsed, 3)
                 mm_value = round(mm_value, 3)
 
-                csv_writer.writerow([elapsed, mm_value, raw_val, current_cycle])
+                csv_writer.writerow([elapsed, mm_value, raw_val])
                 csv_file.flush() 
 
             time.sleep(sample_rates[0])      
