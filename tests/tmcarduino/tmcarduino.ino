@@ -8,6 +8,7 @@ const int RX_PIN = 16;
 const int TX_PIN = 17;
 const uint8_t REPLY_DELAY = 4;
 const int ENABLE_PIN = 19;
+const int RPI_SYNC_PIN = 32;
 
 const int GREEN_LED_PIN = 2;
 const int RED_LED_PIN = 4;
@@ -124,7 +125,7 @@ void setup()
     pinMode(ENABLE_PIN, INPUT_PULLDOWN);
     pinMode(GREEN_LED_PIN, OUTPUT);
     pinMode(RED_LED_PIN, OUTPUT);
-
+    pinMode(RPI_SYNC_PIN, OUTPUT);
     digitalWrite(GREEN_LED_PIN, LOW);
     digitalWrite(RED_LED_PIN, HIGH);
 
@@ -160,6 +161,7 @@ void loop()
 
     stepper_driver.disableInverseMotorDirection();
     Serial0.println("Moving up");
+    digitalWrite(RPI_SYNC_PIN, HIGH);
     indicateMoving();
     for (int i = 0; i < NUM_STEPS; i++)
     {
@@ -210,6 +212,7 @@ void loop()
     stepper_driver.moveAtVelocity(0);
     stepper_driver.disable();
     indicateStopped();
+    digitalWrite(RPI_SYNC_PIN, LOW);
     checkForOverheat();
     checkEnablePin();
     // Kill program entirely if shutdown
