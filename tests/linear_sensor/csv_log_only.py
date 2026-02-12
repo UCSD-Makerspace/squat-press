@@ -13,24 +13,24 @@ SYNC_GPIO_PIN = 21
 in_cycle, cycle_start_time, cycle_count = False, None, 0
 lock = threading.Lock()
 
-def sync_rising(channel):
-    """ Increment cycle count and mark cycle start time when sync pin pulls high."""
+def sync_callback(channel):
+    """ Increment cycle count and mark cycle start time when sync pin changes state."""
     global in_cycle, cycle_start_time, cycle_count
-    with lock:
-        in_cycle = True
-        cycle_start_time = time.time()
-        cycle_count += 1
-    print(f"\n>>> CYLCE {cycle_count} STARTED")
-
-
-def sync_falling(channel):
-    """ Set in_cycle to False when sync pin pulls low."""
-    global in_cycle
-    with lock:
-        in_cycle = False
-        duration = time.time() - cycle_start_time if cycle_start_time else 0
-        print(f">>> CYCLE {cycle_count} ENDED, duration: {duration:.3f} s")
     
+    time.sleep(0.001)
+    pin_state = GPIO.input(SYNC_GPIO_PIN)
+
+    with lock:
+        if pin_state == GPIO.HIGH:
+            in_cycle = True
+            cycle_start_time = time.time()
+            cycle_count += 1
+            print(f"\n>>> CYCLE {cycle_count} STARTED")
+        else:
+            in_cycle = False
+            duration = time.time() - cycle_start_time if cycle_start_time else 0
+            print(f">>> CYCLE {cycle_count} ENDED, duration: {duration:.3f} s")
+
 def check_mm_value(sensor: serial_reader.LinearSensorReader, last_val: Optional[float], last_raw_val: Optional[float]):
     """Return (interpolated mm, raw decimal value)"""
     raw_val = sensor.send_command('F')
@@ -54,8 +54,7 @@ def main():
     # --- Setup GPIO pins for cycle sync ---
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(SYNC_GPIO_PIN, GPIO.IN)
-    GPIO.add_event_detect(SYNC_GPIO_PIN, GPIO.RISING, callback=sync_rising, bouncetime=50)
-    GPIO.add_event_detect(SYNC_GPIO_PIN, GPIO.FALLING, callback=sync_falling, bouncetime=50)
+    GPIO.add_event_detect(SYNC_GPIO_PIN, GPIO.BOTH, callback=sync_callback, bouncetime=50)
 
     # --- Setup CSV logging ---
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
