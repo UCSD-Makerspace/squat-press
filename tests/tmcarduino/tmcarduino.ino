@@ -8,7 +8,7 @@ const int RX_PIN = 16;
 const int TX_PIN = 17;
 const uint8_t REPLY_DELAY = 4;
 const int ENABLE_PIN = 19;
-const int RPI_SYNC_PIN = 32;
+const int RPI_SYNC_PIN = 5;
 
 const int GREEN_LED_PIN = 2;
 const int RED_LED_PIN = 4;
