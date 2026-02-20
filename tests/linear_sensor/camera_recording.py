@@ -1,4 +1,5 @@
 import cv2
+from datetime import datetime
 import sys
 
 cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
@@ -7,8 +8,11 @@ cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
 fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
-timestamp = cv2.getTickCount()
-out = cv2.VideoWriter('squat_recording{time}.mp4'.format(time=timestamp), fourcc, 20.0, (1280, 720))
+now = datetime.now()
+timestamp = now.strftime("%Y%m%d_%H%M%S")
+
+filename = f'squat_recording_{timestamp}.mp4'
+out = cv2.VideoWriter(filename, fourcc, 20.0, (1280, 720))
 
 print("REC started... Press Ctrl+C to stop and save.")
 
@@ -27,5 +31,5 @@ except KeyboardInterrupt:
 finally:
     cap.release()
     out.release()
-    print("Done! Video saved as squat_recording{time}.mp4".format(time=timestamp))
+    print("Done! Video saved as {}".format(filename))
     sys.exit()
