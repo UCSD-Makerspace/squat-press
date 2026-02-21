@@ -17,9 +17,9 @@ height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
 print(f"Camera actual settings: {width}x{height} @ {actual_fps} FPS")
 
-fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
+fourcc = cv2.VideoWriter_fourcc(*'MJPG')   
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-filename = f'squat_recording_{timestamp}.mp4'
+filename = f'squat_recording_{timestamp}.avi'
 
 out = cv2.VideoWriter(filename, fourcc, actual_fps, (width, height))
 
