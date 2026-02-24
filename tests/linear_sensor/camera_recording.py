@@ -11,7 +11,7 @@ cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-print(f"Hardware: {width}x{height} @ {actual_fps} FPS")
+print(f"Hardware: {width}x{height} @ 30 FPS")
 
 fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
