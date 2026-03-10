@@ -45,6 +45,11 @@ def check_mm_value(sensor: serial_reader.LinearSensorReader, last_val: Optional[
 
 def main():
     global cycle_start_time, cycle_count, in_cycle
+    # Get user input for which number linear sensor we are using
+    sensor_num = input("Enter sensor number (e.g. 1): ").strip()
+    if not sensor_num.isdigit():
+        print("Invalid input. Please enter a number.")
+        return
 
     # --- Connect to sensor ---
     sensor = serial_reader.LinearSensorReader("/dev/ttyACM0", 115200)
@@ -64,7 +69,7 @@ def main():
 
     # --- Setup CSV logging ---
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    csv_file = open(f"sensor_log_{timestamp}.csv", "w", newline="")
+    csv_file = open(f"sensor{sensor_num}_{timestamp}.csv", "w", newline="")
     csv_writer = csv.writer(csv_file)
     csv_writer.writerow(["time_s", "position_mm", "raw_value"])
 
@@ -95,7 +100,7 @@ def main():
 
     finally:
         csv_file.close()
-        print(f"Data saved to sensor_log_{timestamp}.csv")
+        print(f"Data saved to sensor{sensor_num}_{timestamp}.csv")
 
 if __name__ == "__main__":
     main()
