@@ -10,8 +10,8 @@ class LinearSensorReader:
         self.running = False
 
         self.calibration_table = [
-            (0.000, 10629),
-            (1.000, 10521),
+            (0.000, 10640),
+            (1.000, 10500),
             (2.000, 10380),
             (3.000, 10226),
             (4.000, 10068),
