@@ -203,16 +203,17 @@ void loop()
         Serial0.printf("SG: %d\n", sgStatus);
         if (sgStatus < 100)
         {
+            digitalWrite(RPI_SYNC_PIN, LOW);
             break;
         }
         delay(5);
     }
-    stepper_driver.disableStealthChop();
 
+    stepper_driver.disableStealthChop();
     stepper_driver.moveAtVelocity(0);
     stepper_driver.disable();
     indicateStopped();
-    digitalWrite(RPI_SYNC_PIN, LOW);
+    
     checkForOverheat();
     checkEnablePin();
     // Kill program entirely if shutdown
