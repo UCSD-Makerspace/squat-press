@@ -25,7 +25,7 @@ def check_mm_value(sensor, mm_value, since_last_mm):
 def main():
     motor = tmc2209.TMC2209()
     
-    sensor = serial_reader.LinearSensorReader("/dev/ttyACM0", 115200)
+    sensor = serial_reader.LinearSensorReader("/dev/ttyACM1", 115200)
     if not sensor.connect():
         raise Exception("Failed to connect to linear sensor")
 

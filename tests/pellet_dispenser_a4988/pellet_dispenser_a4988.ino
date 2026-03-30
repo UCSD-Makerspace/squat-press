@@ -35,7 +35,7 @@ void loop() {
         input.trim();
 
         if (input.equals("d") || input.equals("D")) {
-            dispense_degrees(45); 
+            stepper.rotate(45);
         } else if (input.length() > 0) {
             int degrees = input.toInt();
 

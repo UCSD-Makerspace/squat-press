@@ -176,7 +176,7 @@ class CalibrationGenerator:
 
 if __name__ == "__main__":
     # Configuration
-    PORT = "/dev/ttyACM0"
+    PORT = "/dev/ttyACM1"
     BAUDRATE = 115200
     MAX_MM = 25
     SAMPLES_PER_POINT = 50

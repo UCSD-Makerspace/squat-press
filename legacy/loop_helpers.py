@@ -14,7 +14,7 @@ def init_hardware(pi):
     
     try:
         logging.info("Initializing linear sensor...")
-        p = serial_reader.LinearSensorReader('/dev/ttyACM0', 115200)
+        p = serial_reader.LinearSensorReader('/dev/ttyACM1', 115200)
         if not p.connect():
             raise Exception("Failed to connect to linear sensor")
         

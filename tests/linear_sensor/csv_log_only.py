@@ -52,7 +52,7 @@ def main():
         return
 
     # --- Connect to sensor ---
-    sensor = serial_reader.LinearSensorReader("/dev/ttyACM0", 115200)
+    sensor = serial_reader.LinearSensorReader("/dev/ttyACM1", 115200)
     if not sensor.connect():
         raise Exception("Failed to connect to linear sensor")
 

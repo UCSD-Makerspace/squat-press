@@ -103,7 +103,7 @@ def main():
                 if mm_value is not None and since_last_mm > 5.0:
                     logging.warning("No valid data received for 5 seconds, restarting SENTReader")
                     p.disconnect()
-                    p = serial_reader.LinearSensorReader('/dev/ttyACM0', 115200)
+                    p = serial_reader.LinearSensorReader('/dev/ttyACM1', 115200)
                     if not p.connect():
                         logging.error("Failed to connect LinearSensorReader after restart")
                         continue
