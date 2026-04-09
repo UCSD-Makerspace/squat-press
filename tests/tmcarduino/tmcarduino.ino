@@ -161,11 +161,15 @@ void loop()
 
     stepper_driver.disableInverseMotorDirection();
     Serial0.println("Moving up");
-    digitalWrite(RPI_SYNC_PIN, HIGH);
     indicateMoving();
+    bool gpio_write_done = false;
     for (int i = 0; i < NUM_STEPS; i++)
     {
         stepper_driver.moveAtVelocity(velocities[i]);
+        if (gpio_write_done == false) {
+            digitalWrite(RPI_SYNC_PIN, HIGH);
+        }
+        gpio_write_done = true;
         delay(waitTimesMs[i] / 2);
         status = stepper_driver.getStatus();
         checkStatus(status);
