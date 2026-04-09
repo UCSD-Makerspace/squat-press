@@ -123,8 +123,21 @@ def serial_reader_thread(ser, stop_event):
 def main():
     sensor_num = input("Enter sensor number (e.g. 1): ").strip()
 
-    # Serial
-    ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.02)
+        # Serial
+        def get_serial_port(default="ACM1"):
+            s = input(f"Serial port (e.g. ACM1 or /dev/ttyACM1) [{default}]: ").strip()
+            if not s:
+                s = default
+            if s.startswith("/dev/") or s.startswith("COM"):
+                return s
+            s_low = s.lower()
+            if s_low.startswith("acm"):
+                return f"/dev/tty{s_low}"
+            if s_low.isdigit():
+                return f"/dev/ttyACM{s_low}"
+            return s
+
+        ser = serial.Serial(get_serial_port(), BAUD_RATE, timeout=0.02)
     print(f"Connected to {SERIAL_PORT}")
 
     # Warm up

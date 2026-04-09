@@ -7,6 +7,20 @@ from pathlib import Path
 import importlib.util
 
 
+def get_serial_port(default="ACM1"):
+    s = input(f"Serial port (e.g. ACM1 or /dev/ttyACM1) [{default}]: ").strip()
+    if not s:
+        s = default
+    if s.startswith("/dev/") or s.startswith("COM"):
+        return s
+    s_low = s.lower()
+    if s_low.startswith("acm"):
+        return f"/dev/tty{s_low}"
+    if s_low.isdigit():
+        return f"/dev/ttyACM{s_low}"
+    return s
+
+
 class LinearSensorReader:
     def __init__(self, port, baudrate):
         self.port = port
@@ -203,7 +217,8 @@ class LinearSensorReader:
 
 
 if __name__ == "__main__":
-    sensor = LinearSensorReader("/dev/ttyACM1", 115200)
+    port = get_serial_port()
+    sensor = LinearSensorReader(port, 115200)
 
     if sensor.connect():
         print("\n=== Testing Commands ===")
