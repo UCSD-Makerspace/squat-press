@@ -3,6 +3,8 @@ import time
 import threading
 from datetime import datetime
 from collections import deque
+from pathlib import Path
+import importlib.util
 
 
 class LinearSensorReader:
@@ -18,34 +20,12 @@ class LinearSensorReader:
         self._stop_event  = threading.Event()
         self._reader_thread = None
 
-        self.calibration_table = [
-            (0.000, 10615),
-            (1.000, 10444),
-            (2.000, 10284),
-            (3.000, 10136),
-            (4.000, 9992),
-            (5.000, 9826),
-            (6.000, 9644),
-            (7.000, 9556),
-            (8.000, 9463),
-            (9.000, 9184),
-            (10.000, 8982),
-            (11.000, 8732),
-            (12.000, 8457),
-            (13.000, 8289),
-            (14.000, 8125),
-            (15.000, 7959),
-            (16.000, 7789),
-            (17.000, 7637),
-            (18.000, 7447),
-            (19.000, 7267),
-            (20.000, 7042),
-            (21.000, 6865),
-            (22.000, 6684),
-            (23.000, 6471),
-            (24.000, 6254),
-            (25.000, 6114),
-        ]
+        # Load shared calibration table from tests/linear_sensor/calibration/calibration_table.py
+        cal_path = Path(__file__).resolve().parents[1] / "calibration" / "calibration_table.py"
+        spec = importlib.util.spec_from_file_location("calibration_table", cal_path)
+        cal_mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cal_mod)
+        self.calibration_table = cal_mod.calibration_table
 
     def connect(self):
         try:
