@@ -1,106 +1,106 @@
-import Dispenser.LinearSensor.serial_reader as serial_reader
-import matplotlib.pyplot as plt
-import csv
-from datetime import datetime
-import RPi.GPIO as GPIO
-import threading
+"""
+GPIO SYNC ONLY — no rolling average, single-threaded original read rate
+=======================================================================
+GPIO pin sets t=0 as before. No background thread, no averaging.
+Reads one sample per output tick, same as the original script.
+
+Output CSV columns: cycle, time_s, position_mm, raw_value
+"""
+
+import serial
 import time
-from typing import Optional
+import csv
+import threading
+import RPi.GPIO as GPIO
+from datetime import datetime
 
-sample_rates = [0.01, 0.025, 0.050, 0.1]
+SERIAL_PORT     = "/dev/ttyACM0"
+BAUD_RATE       = 115200
+SAMPLE_INTERVAL = 0.010
+SYNC_GPIO_PIN   = 21
 
-SYNC_GPIO_PIN = 21
-in_cycle, cycle_start_time, cycle_count = False, None, 0
-lock = threading.Lock()
+CALIBRATION_TABLE = [
+    (0.000, 10615), (1.000, 10444), (2.000, 10284), (3.000, 10136),
+    (4.000,  9992), (5.000,  9826), (6.000,  9644), (7.000,  9556),
+    (8.000,  9463), (9.000,  9184),(10.000,  8982),(11.000,  8732),
+    (12.000, 8457),(13.000,  8289),(14.000,  8125),(15.000,  7959),
+    (16.000, 7789),(17.000,  7637),(18.000,  7447),(19.000,  7267),
+    (20.000, 7042),(21.000,  6865),(22.000,  6684),(23.000,  6471),
+    (24.000, 6254),(25.000,  6114),
+]
+
+def interpolate(raw):
+    t = CALIBRATION_TABLE
+    if raw >= t[0][1]:  return t[0][0]
+    if raw <= t[-1][1]: return t[-1][0]
+    for i in range(len(t) - 1):
+        mm1, r1 = t[i]; mm2, r2 = t[i+1]
+        if r2 <= raw <= r1:
+            return mm1 + (raw - r1) / (r2 - r1) * (mm2 - mm1)
+    return None
+
+_lock             = threading.Lock()
+_in_cycle         = False
+_cycle_start_time = None
+_cycle_count      = 0
 
 def sync_callback(channel):
-    """ Increment cycle count and mark cycle start time when sync pin changes state."""
-    global in_cycle, cycle_start_time, cycle_count
-    
-    time.sleep(0.001)
-    pin_state = GPIO.input(SYNC_GPIO_PIN)
-
-    with lock:
-        if pin_state == GPIO.HIGH:
-            in_cycle = True
-            cycle_start_time = time.time()
-            cycle_count += 1
-            print(f"\n>>> CYCLE {cycle_count} STARTED")
+    global _in_cycle, _cycle_start_time, _cycle_count
+    t = time.time()
+    state = GPIO.input(SYNC_GPIO_PIN)
+    with _lock:
+        if state == GPIO.HIGH:
+            _in_cycle = True; _cycle_start_time = t; _cycle_count += 1
+            print(f"\n>>> CYCLE {_cycle_count} STARTED")
         else:
-            in_cycle = False
-            duration = time.time() - cycle_start_time if cycle_start_time else 0
-            print(f">>> CYCLE {cycle_count} ENDED, duration: {duration:.3f} s")
-
-def check_mm_value(sensor: serial_reader.LinearSensorReader, last_val: Optional[float], last_raw_val: Optional[float]):
-    """Return (interpolated mm, raw decimal value)"""
-    raw_val = sensor.send_command('F')
-    if raw_val:
-        try:
-            decimal_value = int(raw_val.split()[0], 16)
-            mm = sensor.interpolate(decimal_value)
-            return mm, decimal_value
-        except Exception as e:
-            print(f"Parse error: {e}, raw={raw_val}")
-    return last_val, last_raw_val
+            _in_cycle = False
+            print(f">>> CYCLE {_cycle_count} ENDED ({time.time()-_cycle_start_time:.3f}s)")
 
 def main():
-    global cycle_start_time, cycle_count, in_cycle
-    # Get user input for which number linear sensor we are using
-    sensor_num = input("Enter sensor number (e.g. 1): ").strip()
-    if not sensor_num.isdigit():
-        print("Invalid input. Please enter a number.")
-        return
+    sensor_num = input("Sensor number: ").strip()
+    ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+    for _ in range(5): ser.write(b'F'); ser.readline(); time.sleep(0.005)
 
-    # --- Connect to sensor ---
-    sensor = serial_reader.LinearSensorReader("/dev/ttyACM1", 115200)
-    if not sensor.connect():
-        raise Exception("Failed to connect to linear sensor")
-
-    # --- Setup GPIO pins for cycle sync ---
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(SYNC_GPIO_PIN, GPIO.IN)
-    GPIO.add_event_detect(SYNC_GPIO_PIN, GPIO.BOTH, callback=sync_callback, bouncetime=50)
+    GPIO.add_event_detect(SYNC_GPIO_PIN, GPIO.BOTH, callback=sync_callback, bouncetime=10)
 
-    print("Testing GPIO 21 state:")
-    for i in range(20):
-        state = GPIO.input(SYNC_GPIO_PIN)
-        print(f"GPIO 21: {state}")
-        time.sleep(0.1)
+    ts = datetime.now().strftime("%H%M%S")
+    f  = open(f"gpio_sensor{sensor_num}_{ts}.csv", "w", newline="")
+    w  = csv.writer(f)
+    w.writerow(["cycle", "time_s", "position_mm", "raw_value"])
 
-    # --- Setup CSV logging ---
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    csv_file = open(f"sensor{sensor_num}_{timestamp}.csv", "w", newline="")
-    csv_writer = csv.writer(csv_file)
-    csv_writer.writerow(["time_s", "position_mm", "raw_value"])
-
-    mm_value = None
-    raw_val = None
+    print("GPIO-sync-only capture running (no averaging). Ctrl+C to stop.\n")
+    next_tick = time.time()
+    mm = None; raw = None
 
     try:
         while True:
-            mm_value, raw_val = check_mm_value(sensor, mm_value, raw_val)
+            t0 = time.time()
+            ser.write(b'F')
+            resp = ser.readline().decode('ascii', errors='replace').strip()
+            if resp:
+                try:
+                    raw = int(resp.split()[0], 16)
+                    mm  = interpolate(raw)
+                except: pass
 
-            with lock:
-                currently_in_cycle = in_cycle
-                current_start_time = cycle_start_time
-                current_cycle = cycle_count
+            with _lock:
+                in_cycle = _in_cycle; start = _cycle_start_time; cyc = _cycle_count
 
-            if currently_in_cycle and mm_value is not None and current_start_time is not None:
-                elapsed = time.time() - current_start_time
-                elapsed = round(elapsed, 3)
-                mm_value = round(mm_value, 3)
+            if in_cycle and mm is not None and start is not None:
+                w.writerow([cyc, round(t0 - start, 4), round(mm, 4), raw])
+                f.flush()
 
-                csv_writer.writerow([elapsed, mm_value, raw_val])
-                csv_file.flush() 
-
-            time.sleep(sample_rates[0])      
+            next_tick += SAMPLE_INTERVAL
+            sleep_for  = next_tick - time.time()
+            if sleep_for > 0: time.sleep(sleep_for)
+            else: next_tick = time.time()
 
     except KeyboardInterrupt:
-        print("\nStopped by user")
-
+        print("\nDone.")
     finally:
-        csv_file.close()
-        print(f"Data saved to sensor{sensor_num}_{timestamp}.csv")
+        f.close(); GPIO.cleanup(); ser.close()
 
 if __name__ == "__main__":
     main()
