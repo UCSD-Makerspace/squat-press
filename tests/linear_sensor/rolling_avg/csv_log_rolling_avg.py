@@ -122,6 +122,7 @@ def serial_reader_thread(ser, stop_event):
 # ── Main logging loop ─────────────────────────────────────────────────────────
 def main():
     sensor_num = input("Enter sensor number (e.g. 1): ").strip()
+    MAX_CYCLES = int(input("Enter max cycles to record (0 for infinite): ") or 0)
     # Serial
     def get_serial_port(default="ACM1"):
         s = input(f"Serial port (e.g. ACM1 or /dev/ttyACM1) [{default}]: ").strip()
@@ -196,6 +197,10 @@ def main():
                     in_cycle   = _in_cycle
                     cycle_start = _cycle_start_time
                     cycle_num  = _cycle_count
+
+                if MAX_CYCLES > 0 and cycle_num > MAX_CYCLES:
+                    print(f"\nReached max cycles ({MAX_CYCLES}). Stopping.")
+                    break
 
                 if in_cycle and cycle_start is not None:
                     elapsed = round(now - cycle_start, 4)
