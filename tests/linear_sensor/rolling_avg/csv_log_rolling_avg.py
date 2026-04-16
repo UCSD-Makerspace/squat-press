@@ -218,6 +218,7 @@ def main():
     except KeyboardInterrupt:
         print(f"\nStopped. Saved to {filename}")
     finally:
+        print(f"Saved to: {filename}")
         stop_event.set()
         csv_file.close()
         GPIO.cleanup()
