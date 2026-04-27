@@ -20,6 +20,7 @@ bool overheated_shutdown = false;
 TMC2209::Status status;
 constexpr int NUM_STEPS = 9;
 constexpr int MICROSTEP_VALUE = 16;
+constexpr float UP_SPEED_SCALE = 0.75f;
 const int velocities[NUM_STEPS] = {250 * MICROSTEP_VALUE, 500 * MICROSTEP_VALUE, 1000 * MICROSTEP_VALUE, 1500 * MICROSTEP_VALUE, 2000 * MICROSTEP_VALUE, 3000 * MICROSTEP_VALUE, 4000 * MICROSTEP_VALUE, 2000 * MICROSTEP_VALUE, 500 * MICROSTEP_VALUE};
 const int waitTimesMs[NUM_STEPS] = {60, 60, 40, 40, 40, 40, 50, 40, 40};
 
@@ -165,15 +166,20 @@ void loop()
     bool gpio_write_done = false;
     for (int i = 0; i < NUM_STEPS; i++)
     {
-        stepper_driver.moveAtVelocity(velocities[i]);
+        int upVelocity = static_cast<int>(velocities[i] * UP_SPEED_SCALE);
+        int upSegmentMs = static_cast<int>(waitTimesMs[i] / UP_SPEED_SCALE);
+        int firstHalfMs = upSegmentMs / 2;
+        int secondHalfMs = upSegmentMs - firstHalfMs;
+
+        stepper_driver.moveAtVelocity(upVelocity);
         if (gpio_write_done == false) {
             digitalWrite(RPI_SYNC_PIN, HIGH);
         }
         gpio_write_done = true;
-        delay(waitTimesMs[i] / 2);
+        delay(firstHalfMs);
         status = stepper_driver.getStatus();
         checkStatus(status);
-        delay(waitTimesMs[i] / 2);
+        delay(secondHalfMs);
     }
 
     checkForOverheat();
@@ -229,7 +235,7 @@ void loop()
             delay(10000);
         }
     }
-    delay(2000);
+    delay(5000);
     stepper_driver.enable();
     stepper_driver.setStandstillMode(TMC2209::StandstillMode::BRAKING);
     stepper_driver.setRunCurrent(50);
