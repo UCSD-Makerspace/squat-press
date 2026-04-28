@@ -53,29 +53,6 @@ void connectAndSetDefaultConfig()
     stepper_driver.setHoldCurrent(20);
 }
 
-void checkStatus(const TMC2209::Status &status)
-{
-    uint32_t bits = 0;
-    memcpy(&bits, &status, sizeof(bits));
-    Serial0.print("TMC2209 Status: 0x");
-    for (int bit = 31; bit >= 0; --bit)
-    {
-        Serial0.print((bits >> bit) & 1U);
-        if (bit % 4 == 0 && bit != 0)
-            Serial0.print('|');
-    }
-    Serial0.println();
-
-    if (status.over_temperature_warning)
-    {
-        overheated = true;
-    }
-    if (status.over_temperature_shutdown)
-    {
-        overheated_shutdown = true;
-    }
-}
-
 // If the enable pin is not pulled high, restart the ESP32.
 void checkEnablePin()
 {
@@ -93,17 +70,6 @@ void checkEnablePin()
         Serial0.println("Stopping!");
         delay(200);
         ESP.restart();
-    }
-}
-
-void checkForOverheat()
-{
-    // Wait extra time if overheated
-    if (overheated)
-    {
-        Serial0.println("Overheated!");
-        delay(8000);
-        overheated = false;
     }
 }
 
@@ -143,9 +109,46 @@ void setup()
     stepper_driver.enable();
 }
 
+void jitterTest()
+{
+    const int velocity = 2000 * MICROSTEP_VALUE;
+
+    const uint32_t interval_us = 5000; // 5ms
+    uint32_t last_switch = micros();
+    bool moving_up = true;
+
+    stepper_driver.disableStealthChop();
+    
+    while (true) {
+
+        checkEnablePin();
+
+        uint32_t now = micros();
+
+        if (now - last_switch >= interval_us) {
+
+            last_switch = now;
+
+            if (moving_up) 
+            {
+                stepper_driver.disableInverseMotorDirection();
+                stepper_driver.moveAtVelocity(velocity);
+                digitalWrite(RPI_SYNC_PIN, HIGH);
+            } 
+            else 
+            {
+                stepper_driver.enableInverseMotorDirection();
+                stepper_driver.moveAtVelocity(velocity);
+                digitalWrite(RPI_SYNC_PIN, LOW);
+            }
+            moving_up = !moving_up;
+        }
+        delayMicroseconds(50);
+    }
+}
+
 void loop()
 {
-    stepper_driver.disableStealthChop();
     checkEnablePin();
 
     connected = stepper_driver.isSetupAndCommunicating();
@@ -155,89 +158,6 @@ void loop()
         connectAndSetDefaultConfig();
         delay(500);
     }
-    status = stepper_driver.getStatus();
-    checkStatus(status);
-    checkForOverheat();
-    delay(200);
 
-    stepper_driver.disableInverseMotorDirection();
-    Serial0.println("Moving up");
-    indicateMoving();
-    bool gpio_write_done = false;
-    for (int i = 0; i < NUM_STEPS; i++)
-    {
-        int upVelocity = static_cast<int>(velocities[i] * UP_SPEED_SCALE);
-        int upSegmentMs = static_cast<int>(waitTimesMs[i] / UP_SPEED_SCALE);
-        int firstHalfMs = upSegmentMs / 2;
-        int secondHalfMs = upSegmentMs - firstHalfMs;
-
-        stepper_driver.moveAtVelocity(upVelocity);
-        if (gpio_write_done == false)
-        {
-            digitalWrite(RPI_SYNC_PIN, HIGH);
-        }
-        gpio_write_done = true;
-        delay(firstHalfMs);
-        status = stepper_driver.getStatus();
-        checkStatus(status);
-        delay(secondHalfMs);
-    }
-
-    checkForOverheat();
-    stepper_driver.moveAtVelocity(0);
-    stepper_driver.enableInverseMotorDirection();
-    status = stepper_driver.getStatus();
-    checkStatus(status);
-    delay(100);
-
-    Serial0.println("Moving down");
-    for (int i = 0; i < NUM_STEPS; i++)
-    {
-        stepper_driver.moveAtVelocity(velocities[i]);
-        delay(waitTimesMs[i] * 0.75);
-        status = stepper_driver.getStatus();
-        checkStatus(status);
-    }
-    stepper_driver.moveAtVelocity(0);
-    delay(100);
-    stepper_driver.setRunCurrent(5);
-    stepper_driver.enableStealthChop();
-    stepper_driver.setStallGuardThreshold(100);
-    stepper_driver.moveAtVelocity(250 * MICROSTEP_VALUE);
-    delay(50);
-    int timeElapsedMS = 0;
-    uint16_t sgStatus;
-    while (timeElapsedMS < 2000)
-    {
-        status = stepper_driver.getStatus();
-        sgStatus = stepper_driver.getStallGuardResult();
-        Serial0.printf("SG: %d\n", sgStatus);
-        if (sgStatus < 100)
-        {
-            digitalWrite(RPI_SYNC_PIN, LOW);
-            break;
-        }
-        delay(5);
-    }
-
-    stepper_driver.disableStealthChop();
-    stepper_driver.moveAtVelocity(0);
-    stepper_driver.disable();
-    indicateStopped();
-
-    checkForOverheat();
-    checkEnablePin();
-    // Kill program entirely if shutdown
-    if (overheated_shutdown)
-    {
-        while (true)
-        {
-            Serial0.println("Overtemperature shutdown! Stopping Test.");
-            delay(10000);
-        }
-    }
-    delay(5000);
-    stepper_driver.enable();
-    stepper_driver.setStandstillMode(TMC2209::StandstillMode::BRAKING);
-    stepper_driver.setRunCurrent(50);
+    jitterTest();
 }
