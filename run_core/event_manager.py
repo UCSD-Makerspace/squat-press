@@ -1,0 +1,32 @@
+import csv
+import logging
+
+from events import EventType
+
+write_path = "/home/mice/mice-squat/logs/event_log.csv"
+class EventManager:
+    def __init__(self, event_queue, dispenser):
+        self.q = event_queue
+        self.dispenser = dispenser
+        self.ready_to_dispense = True
+
+    def run(self):
+        while True:
+            evt, payload, time = self.q.get()
+            self.log_event(evt, payload, time)
+            if evt == EventType.LIFT_DETECTED:
+                logging.info("Lift detected, dispensing pellet...")
+                print(f"[DEBUG] Lift detected event received in EventManager")
+                self.dispenser.dispense_pellet()
+                self.ready_to_dispense = False
+
+            elif evt == EventType.PELLET_TAKEN:
+                logging.info("Pellet taken, ready for next lift.")
+                print(f"[DEBUG] Pellet taken event received in EventManager")
+                self.ready_to_dispense = True
+
+    def log_event(self, evt, payload, t):
+        logging.info(f"Event: {evt}, Payload: {payload}, Time: {t}")
+        with open(write_path, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([evt, payload, t])

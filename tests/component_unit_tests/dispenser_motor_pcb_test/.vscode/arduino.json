@@ -1,0 +1,6 @@
+{
+    "configuration": "flash=2097152_0,freq=200,opt=Small,os=none,profile=Disabled,rtti=Disabled,stackprotect=Disabled,exceptions=Disabled,dbgport=Disabled,dbglvl=None,usbstack=picosdk,ipbtstack=ipv4only,uploadmethod=default",
+    "board": "rp2040:rp2040:rpipico",
+    "port": "COM4",
+    "sketch": "dispenser_motor_pcb_test.ino"
+}
