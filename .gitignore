@@ -6,7 +6,6 @@ __pycache__/
 logs/
 electrical/
 compare_out/
-data/
 
 # C extensions
 *.so
