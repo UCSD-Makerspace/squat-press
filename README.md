@@ -3,12 +3,11 @@
 Repository for the mice squat press system.
 
 ```
-.                                                                                                       
-├── ADC       - Python package for the MCP3201 ADC (used by dispenser, lx3302a)   
-├── dispenser - Python package for the dispenser   
-├── lx3302a   - Python package for the LX3302A inductive sensor   
-├── pi        - Database source code   
-└── tests     - Testing scripts   
+.
+├── components/   - Decoupled subsystem drivers (LinearSensor, PhotoInterruptor, StepperMotor, TMC2209)
+├── data/         - CSV captures and validation/analysis scripts for the LXK3302A
+├── run_core/     - Synchronized runtime that coordinates all hardware via the PCB
+└── tests/        - Unit tests, calibration scripts, and flashed Arduino sketches
 ```
 
 ## Installation
@@ -47,4 +46,47 @@ Run `run.sh` to run the basic SENT reader.
 ```
 ./run.sh
 ```
+
+## Data
+
+`/data` contains CSV captures and validation scripts for the LXK3302A linear sensor.
+
+```
+data/
+├── csv/                  - Date-stamped capture sessions (sensor CSVs + golden-truth CSVs)
+├── validation_scripts/
+│   ├── multi_cycle/      - Analysis scripts comparing multi-cycle captures against ground truth
+│   └── single_cycle/     - Single-cycle validation scripts
+└── ipce_capture.py       - IPCE data capture utility
+```
+
+### Linear sensor validation scripts
+
+**`multi_cycle/`**
+
+- `all_cycles.py` — Plots all cycles from a capture session.
+- `all_cycles_vs_gt.py` — Overlays all cycles against the ground-truth curve.
+
+**`single_cycle/`**
+
+- `auc_graph.py` — Computes and plots the area-under-curve (AUC) for the lift peak, comparing ground truth and sensor output.
+- `single_cycle_rolling_avg.py` — Plots a single cycle using a rolling (bucket) average and searches for the best vertical offset that minimizes the error-under-curve vs ground truth.
+- `single_cycle_vs_truth.py` — Same comparison without smoothing.
+- `single_histogram.py` — Histograms of average timing error across the lift (lower-confidence metric).
+- `tut_accuracy.py` — Computes time-under-tension accuracy for the peak eccentric phase vs ground truth.
+- `velocity_graph.py` — Compares point-wise velocities between the sensor output and ground truth.
+- `master_script.py` — Runs all single-cycle analyses in sequence.
+
+#### Ground truth data
+
+Ground-truth positions are extracted from 240 FPS slow-motion video recorded while running the ESP32 test routine in `tests/linear_sensor/accuator_unit_test_stepper/accuator_unit_test_stepper.ino`. That firmware reproduces a representative mice squat motion using velocity mappings on the linear actuator.
+
+## Project layout
+
+- `run_core/` — Synchronized runtime that coordinates all components; expects hardware wired via the PCB.
+- `components/` — Decoupled subsystem drivers used by `run_core`: `LinearSensor`, `PhotoInterruptor`, `StepperMotor`, `TMC2209`.
+- `tests/`
+  - `linear_sensor/` — Live monitoring scripts, calibration utilities, rolling-average samplers, and the `accuator_unit_test_stepper` Arduino sketch used to generate ground-truth data.
+  - `component_unit_tests/` — PCB-level unit tests for the dispenser motor (`dispenser_motor_pcb_test`) and mice door actuator.
+  - `pellet_dispenser_a4988/` — Standalone Arduino sketch for the A4988-driven pellet dispenser.
 
