@@ -1,10 +1,10 @@
 import queue
 from collections import deque
 
-from core.threads.dispenser_thread import DispenserThread
-from core.threads.linear_sensor_thread import LinearSensorThread
-from core.threads.ltc_thread import LTCThread
-from core.threads.linear_sensor_plot_thread import PlotThread
+from run_core.threads.dispenser_thread import DispenserThread
+from run_core.threads.linear_sensor_thread import LinearSensorThread
+from run_core.threads.ltc_thread import LTCThread
+from run_core.threads.linear_sensor_plot_thread import PlotThread
 from event_manager import EventManager
 
 from utils import init_hardware, init_pi, check_all_hardware
