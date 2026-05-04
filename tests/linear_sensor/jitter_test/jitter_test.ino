@@ -168,7 +168,6 @@ void jitterTest()
             checkEnablePin();
 
             bool going_up = (stroke % 2 == 0);
-
             // ── 1. Set direction ───────────────────────────────────────
             if (going_up)
                 stepper_driver.disableInverseMotorDirection();
