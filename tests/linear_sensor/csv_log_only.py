@@ -52,7 +52,8 @@ def sync_callback(channel):
             print(f"\n>>> CYCLE {_cycle_count} STARTED")
         else:
             _in_cycle = False
-            print(f">>> CYCLE {_cycle_count} ENDED ({time.time()-_cycle_start_time:.3f}s)")
+            duration = time.time() - _cycle_start_time if _cycle_start_time else 0
+            print(f">>> CYCLE {_cycle_count} ENDED ({duration:.3f}s)")
 
 def _resolve_port(s, default="ACM0"):
     if not s:
@@ -122,7 +123,7 @@ def main():
                 count = 0; t_report = now
 
     except KeyboardInterrupt:
-        print("\nDone.")
+        print(f"\nDone. Saving to {f.name}")
     finally:
         f.close(); GPIO.cleanup(); ser.close()
 
