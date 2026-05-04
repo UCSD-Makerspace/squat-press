@@ -1,8 +1,8 @@
 """
-GPIO SYNC ONLY — no rolling average, single-threaded original read rate
+GPIO SYNC ONLY — no rolling average, uncapped single-threaded read rate
 =======================================================================
-GPIO pin sets t=0 as before. No background thread, no averaging.
-Reads one sample per output tick, same as the original script.
+GPIO pin sets t=0. No background thread, no averaging, no sleep delays.
+Spams 'F' as fast as serial allows to maximise sample rate.
 
 Output CSV columns: cycle, time_s, position_mm, raw_value
 """
@@ -14,10 +14,8 @@ import threading
 import RPi.GPIO as GPIO
 from datetime import datetime
 
-SERIAL_PORT     = "/dev/ttyACM0"
-BAUD_RATE       = 115200
-SAMPLE_INTERVAL = 0.010
-SYNC_GPIO_PIN   = 21
+BAUD_RATE     = 115200
+SYNC_GPIO_PIN = 21
 
 CALIBRATION_TABLE = [
     (0.000, 10615), (1.000, 10444), (2.000, 10284), (3.000, 10136),
@@ -56,10 +54,29 @@ def sync_callback(channel):
             _in_cycle = False
             print(f">>> CYCLE {_cycle_count} ENDED ({time.time()-_cycle_start_time:.3f}s)")
 
+def _resolve_port(s, default="ACM0"):
+    if not s:
+        s = default
+    if s.startswith("/dev/") or s.startswith("COM"):
+        return s
+    s_low = s.lower()
+    if s_low.startswith("acm"):
+        return f"/dev/tty{s_low.upper()}"
+    if s_low.isdigit():
+        return f"/dev/ttyACM{s_low}"
+    return s
+
 def main():
     sensor_num = input("Sensor number: ").strip()
-    ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
-    for _ in range(5): ser.write(b'F'); ser.readline(); time.sleep(0.005)
+    raw_port   = input("Serial port (e.g. ACM0 or /dev/ttyACM0) [ACM0]: ").strip()
+    max_cycles = int(input("Max cycles to record (0 for infinite): ").strip() or 0)
+
+    port = _resolve_port(raw_port)
+    ser  = serial.Serial(port, BAUD_RATE, timeout=0.02)
+    print(f"Connected to {port}")
+
+    for _ in range(10):
+        ser.write(b'F'); ser.readline(); time.sleep(0.005)
 
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(SYNC_GPIO_PIN, GPIO.IN)
@@ -70,9 +87,10 @@ def main():
     w  = csv.writer(f)
     w.writerow(["cycle", "time_s", "position_mm", "raw_value"])
 
-    print("GPIO-sync-only capture running (no averaging). Ctrl+C to stop.\n")
-    next_tick = time.time()
+    print("Uncapped sampling running (no averaging, no sleep). Ctrl+C to stop.\n")
+
     mm = None; raw = None
+    count = 0; t_report = time.time()
 
     try:
         while True:
@@ -83,19 +101,25 @@ def main():
                 try:
                     raw = int(resp.split()[0], 16)
                     mm  = interpolate(raw)
+                    count += 1
                 except: pass
 
             with _lock:
                 in_cycle = _in_cycle; start = _cycle_start_time; cyc = _cycle_count
 
+            if max_cycles > 0 and cyc > max_cycles:
+                print(f"\nReached max cycles ({max_cycles}). Stopping.")
+                break
+
             if in_cycle and mm is not None and start is not None:
                 w.writerow([cyc, round(t0 - start, 4), round(mm, 4), raw])
                 f.flush()
 
-            next_tick += SAMPLE_INTERVAL
-            sleep_for  = next_tick - time.time()
-            if sleep_for > 0: time.sleep(sleep_for)
-            else: next_tick = time.time()
+            now = time.time()
+            if now - t_report >= 5.0:
+                hz = count / (now - t_report)
+                print(f"[sampler] {hz:.0f} Hz")
+                count = 0; t_report = now
 
     except KeyboardInterrupt:
         print("\nDone.")
