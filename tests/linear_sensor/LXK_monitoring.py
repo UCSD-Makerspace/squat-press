@@ -89,7 +89,7 @@ class LinearSensorReader:
         """Get device info using 'A' command"""
         return self.send_command('A')
 
-    def continuous_monitoring(self, interval=0.025, filter_window = 5, noise_threshold = 0.06):
+    def continuous_monitoring(self, filter_window = 5, noise_threshold = 0.06):
         """Continuously monitor position with smoothing"""
         self.running = True
         print("Starting continuous monitoring (Press Ctrl+C to stop)")
@@ -121,10 +121,11 @@ class LinearSensorReader:
                 else:
                     print(f"{timestamp}\t{raw_response}\t\t(Parse Error)")
 
-                time.sleep(interval)
-
         except KeyboardInterrupt:
             print("\nStopping monitoring...")
+            self.running = False
+        except Exception as e:
+            print(f"\nError during monitoring: {e}")
             self.running = False
 
 if __name__ == "__main__":
