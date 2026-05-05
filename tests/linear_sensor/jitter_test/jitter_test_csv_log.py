@@ -10,7 +10,7 @@ would already read LOW for both edges, making width measurement unreliable.
 Logs sensor position from each rising edge until the next rising edge (~105ms window:
 5ms motor + 100ms coast). Uncapped sampling, no sleep.
 
-Output CSV columns: stroke_no, direction, time_s, position_mm, raw_value
+Output CSV columns: stroke_no, direction, time_ms, position_mm, raw_value
 """
 
 import serial
@@ -80,7 +80,7 @@ def main():
     max_strokes = int(input("Max strokes to record (0 for infinite): ").strip() or 0)
 
     port = _resolve_port(raw_port)
-    ser  = serial.Serial(port, BAUD_RATE, timeout=0.02)
+    ser  = serial.Serial(port, BAUD_RATE, timeout=None)
     print(f"Connected to {port}")
 
     for _ in range(10):
@@ -93,7 +93,7 @@ def main():
     ts = datetime.now().strftime("%H%M%S")
     f  = open(f"jitter_sensor{sensor_num}_{ts}.csv", "w", newline="")
     w  = csv.writer(f)
-    w.writerow(["stroke_no", "direction", "time_s", "position_mm", "raw_value"])
+    w.writerow(["stroke_no", "direction", "time_ms", "position_mm", "raw_value"])
 
     print("Uncapped sampling running (no sleep). Ctrl+C to stop.\n")
 
@@ -105,12 +105,11 @@ def main():
             t0 = time.time()
             ser.write(b'F')
             resp = ser.readline().decode('ascii', errors='replace').strip()
-            if resp:
-                try:
-                    raw = int(resp.split()[0], 16)
-                    mm  = interpolate(raw)
-                    count += 1
-                except: pass
+            try:
+                raw = int(resp.split()[0], 16)
+                mm  = interpolate(raw)
+                count += 1
+            except: pass
 
             with _lock:
                 in_stroke = _in_stroke
@@ -123,7 +122,7 @@ def main():
                 break
 
             if in_stroke and mm is not None and start is not None:
-                w.writerow([stroke_no, direction, round(t0 - start, 4), round(mm, 4), raw])
+                w.writerow([stroke_no, direction, round((t0 - start) * 1000, 2), round(mm, 4), raw])
                 f.flush()
 
             now = time.time()

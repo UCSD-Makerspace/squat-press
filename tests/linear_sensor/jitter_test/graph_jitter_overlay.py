@@ -53,7 +53,7 @@ def load(path=None):
             rows.append({
                 "stroke_no":   int(r["stroke_no"]),
                 "direction":   r["direction"].strip(),
-                "time_s":      float(r["time_s"]),
+                "time_s":      float(r["time_ms"]) / 1000 if "time_ms" in r else float(r["time_s"]),
                 "position_mm": float(r["position_mm"]),
             })
     if not rows:
