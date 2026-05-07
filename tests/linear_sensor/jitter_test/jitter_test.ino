@@ -17,7 +17,7 @@ bool connected = false;
 
 // ── Motion calibration ────────────────────────────────────────
 constexpr int MICROSTEP_VALUE = 16;
-constexpr float MICROSTEPS_PER_MM = 458.0f * MICROSTEP_VALUE;
+constexpr float MICROSTEPS_PER_MM = 458.0f * MICROSTEP_VALUE; // 458 microsteps is 1mm
 
 // ── Sampling stats ────────────────────────────────────────────
 volatile uint32_t total_switches = 0;
