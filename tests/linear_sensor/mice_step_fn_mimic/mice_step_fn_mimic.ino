@@ -19,7 +19,8 @@ bool connected = false;
 // --------- Physical Definitions -----------
 constexpr int MICROSTEP_VALUE = 16;
 constexpr float MICROSTEPS_PER_MM = 458.0f;
-constexpr float SPEED_MULTIPLIER = 2.0f; // try 1.5f if motor stalls before 19.5mm
+constexpr float SPEED_MULTIPLIER = 1.45f;
+constexpr float UP_TRIM = 1.025f; // compensates for per-segment ramp-up lag; tune until reaching 19.5mm
 
 // ── Motion profile (mouse lift CSV @ 120fps, step-function segments) ─────────
 // frame  mm     Δmm    Δframes  Δt(ms)   v(mm/s)    v(usteps/s)
@@ -34,8 +35,8 @@ constexpr float SPEED_MULTIPLIER = 2.0f; // try 1.5f if motor stalls before 19.5
 // 59     19.0   +2.0     7       58       34.3       15703
 // 64     19.5   +0.5     5       42       12.0        5496
 // ── hold 17ms at peak 19.5mm (frames 64-66) ──────────────────────────────────
-// 82     14.5   -5.0    16      133       37.5       17175  (down)
-// 112     0.0  -14.5    30      250       58.0       26564  (down)
+// 82     14.5   -5.0    16      448       10.05      10050  (down, 33% slower, constant)
+// 112     0.0  -14.5    30      440       10.05      10050  (down, 33% slower, constant)
 
 const int NUM_UP_SEGMENTS = 9;
 const int NUM_DOWN_SEGMENTS = 2;
@@ -44,8 +45,8 @@ const int HOLD_PEAK_MS = 17;
 const int upVelocities[NUM_UP_SEGMENTS]     = { 2498,  7851, 18320, 19628, 27480, 39257, 23554, 15703,  5496};
 const int upTimesMs[NUM_UP_SEGMENTS]        = {   92,    58,    50,    58,    50,    58,    58,    58,    42};
 
-const int downVelocities[NUM_DOWN_SEGMENTS] = {17175, 26564};
-const int downTimesMs[NUM_DOWN_SEGMENTS]    = {  133,   250};
+const int downVelocities[NUM_DOWN_SEGMENTS] = {10050, 10050};
+const int downTimesMs[NUM_DOWN_SEGMENTS]    = {  448,   440};
 
 void connectAndSetDefaultConfig()
 {
@@ -111,12 +112,13 @@ void stepperTest()
     while (true)
     {
         checkEnablePin();
+        stepper_driver.enable();
 
         // -- upward phase --
         stepper_driver.disableInverseMotorDirection();
         for (int i = 0; i < NUM_UP_SEGMENTS; i++)
         {
-            stepper_driver.moveAtVelocity(static_cast<int>(upVelocities[i] * SPEED_MULTIPLIER));
+            stepper_driver.moveAtVelocity(static_cast<int>(upVelocities[i] * SPEED_MULTIPLIER * UP_TRIM));
             delay(static_cast<int>(upTimesMs[i] / SPEED_MULTIPLIER));
         }
 
@@ -128,12 +130,15 @@ void stepperTest()
         stepper_driver.enableInverseMotorDirection();
         for (int i = 0; i < NUM_DOWN_SEGMENTS; i++)
         {
-            stepper_driver.moveAtVelocity(static_cast<int>(downVelocities[i] * SPEED_MULTIPLIER));
+            stepper_driver.moveAtVelocity(static_cast<int>(downVelocities[i] * SPEED_MULTIPLIER * UP_TRIM));
             delay(static_cast<int>(downTimesMs[i] / SPEED_MULTIPLIER));
         }
         stepper_driver.moveAtVelocity(0);
 
-        delay(6000); // 6s settle between reps
+        // disable motor and wait before next rep
+        stepper_driver.disable();
+        delay(5500); // 5.5s settle between reps
+        
     }
 
 }
