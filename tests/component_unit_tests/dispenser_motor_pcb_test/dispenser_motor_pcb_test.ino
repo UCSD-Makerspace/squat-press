@@ -5,30 +5,28 @@
 #define RPM 10
 
 // Pin mapping from your PCB layout
-#define EN 12
-#define MS1 11
-#define MS2 10
-#define MS3 9
-#define RST 7
-#define SLP 6
-#define STEP 5
-#define DIR 4
+#define STEP_PIN 3
+#define DIR_PIN 2
+#define EN_PIN 9
+#define RST_PIN 5
+#define SLP_PIN 4
+#define FEED_BTN 15
 
 // Use the 7-argument constructor supported by your library
 // Format: steps, dir, step, enable, ms1, ms2, ms3
-A4988 stepper(MOTOR_STEPS, DIR, STEP, EN, MS1, MS2, MS3);
+A4988 stepper(MOTOR_STEPS, DIR_PIN, STEP_PIN, EN_PIN, RST_PIN, SLP_PIN, FEED_BTN);
 
 void setup()
 {
   Serial.begin(115200);
 
   // Manually handle the pins the library doesn't cover
-  pinMode(RST, OUTPUT);
-  pinMode(SLP, OUTPUT);
+  pinMode(RST_PIN, OUTPUT);
+  pinMode(SLP_PIN, OUTPUT);
 
   // A4988 requires RST and SLP to be HIGH to run
-  digitalWrite(RST, HIGH);
-  digitalWrite(SLP, HIGH);
+  digitalWrite(RST_PIN, HIGH);
+  digitalWrite(SLP_PIN, HIGH);
 
   delay(1000);
 

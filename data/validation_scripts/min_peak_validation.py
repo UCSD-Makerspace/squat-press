@@ -4,16 +4,15 @@ Minimum peak validation for mice squat-press sensor logs.
 
 This script answers the question:
 
-    Can the sensor reliably record the peak of a realistic mouse lift
-    within a +/- 0.5 mm tolerance?
+        Can the sensor reliably record the peak of a realistic mouse lift
+        within a +/- 0.5 mm tolerance?
 
-It reads the logger CSV formats used in this repository, groups rows into
-individual lift cycles, extracts the detected peak for each cycle, and marks a
-cycle as valid when the detected peak is at least 19.0 mm.
+It reads the standard logger CSV format, groups rows into individual lift
+cycles, extracts the detected peak for each cycle, and marks a cycle as valid
+when the detected peak is at least 19.0 mm.
 
-Supported CSV schemas:
-  - cycle,time_s,position_mm,raw_value
-  - stroke_no,direction,time_ms,time_s,position_mm,raw_value
+Expected CSV schema:
+    - cycle,time_s,position_mm,raw_value
 
 Outputs:
   - console summary
@@ -28,7 +27,6 @@ import argparse
 import csv
 import json
 import math
-from collections import defaultdict
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -43,11 +41,12 @@ import numpy as np
 from scipy import stats
 
 
-GROUND_TRUTH_PEAK_MM = 19.5
+GROUND_TRUTH_PEAK_MM = 19.8
 VALID_MIN_PEAK_MM = 19.0
 MIN_SAMPLES_PER_CYCLE = 5
 MIN_CYCLE_DURATION_S = 0.060
-TIME_RESET_DROP_S = 0.020
+DEFAULT_PEAK_WINDOW_MS = 12.0
+ZOOM_WINDOW_PAD_MS = 3.0
 
 PASS_COLOR = "#2E7D32"
 FAIL_COLOR = "#C62828"
@@ -72,6 +71,7 @@ class CycleSummary:
     raw_value_at_peak: int | None
     mean_dt_s: float
     std_dt_s: float
+    peak_window_samples: int
     valid: bool
     undersampled: bool
     signed_error_mm: float
@@ -97,7 +97,7 @@ def parse_args() -> argparse.Namespace:
         "--ground-truth-mm",
         type=float,
         default=GROUND_TRUTH_PEAK_MM,
-        help="Programmed peak displacement to compare against (default: 19.5).",
+        help="Programmed peak displacement to compare against (default: 19.8).",
     )
     parser.add_argument(
         "--valid-min-mm",
@@ -106,14 +106,18 @@ def parse_args() -> argparse.Namespace:
         help="Minimum detected peak required to count as a valid lift event (default: 19.0).",
     )
     parser.add_argument(
-        "--direction-filter",
-        default="UP",
-        help="Direction to keep when a direction column exists. Use ALL to keep every row.",
-    )
-    parser.add_argument(
         "--show",
         action="store_true",
         help="Also open the figures after saving them.",
+    )
+    parser.add_argument(
+        "--peak-window-ms",
+        type=float,
+        default=DEFAULT_PEAK_WINDOW_MS,
+        help=(
+            "Time window after each cycle peak used to count peak-hold samples "
+            "(default: 12 ms)."
+        ),
     )
     return parser.parse_args()
 
@@ -187,59 +191,45 @@ def _safe_float(value: str | None) -> float | None:
         return None
 
 
-def load_rows(path: Path, direction_filter: str = "UP") -> tuple[list[dict], list[str]]:
+def load_rows(path: Path) -> list[dict]:
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
         fieldnames = [name.strip() for name in (reader.fieldnames or [])]
         rows: list[dict] = []
 
-        has_direction = "direction" in fieldnames
-        keep_direction = direction_filter.strip().upper() != "ALL"
-        direction_target = direction_filter.strip().upper()
+        required = {"cycle", "time_s", "position_mm", "raw_value"}
+        missing = sorted(required.difference(fieldnames))
+        if missing:
+            raise ValueError(
+                f"CSV {path} is missing required column(s): {', '.join(missing)}"
+            )
 
         for order, raw_row in enumerate(reader):
             if not raw_row:
                 continue
 
             row = {key.strip(): value for key, value in raw_row.items() if key is not None}
+            cycle_id = row.get("cycle")
+            time_s = _safe_float(row.get("time_s"))
             position_mm = _safe_float(row.get("position_mm"))
-            if position_mm is None:
+            raw_value = _safe_int(row.get("raw_value"))
+
+            if cycle_id is None or str(cycle_id).strip() == "":
+                continue
+            if time_s is None or position_mm is None or raw_value is None:
                 continue
 
-            if row.get("time_s") is not None and _safe_float(row.get("time_s")) is not None:
-                time_s = float(row.get("time_s"))
-            elif row.get("time_ms") is not None and _safe_float(row.get("time_ms")) is not None:
-                time_s = float(row.get("time_ms")) / 1000.0
-            else:
-                raise ValueError(f"CSV {path} does not contain a usable time_s or time_ms column.")
+            rows.append({
+                "order": order,
+                "cycle_id": str(cycle_id).strip(),
+                "time_s": time_s,
+                "position_mm": position_mm,
+                "raw_value": raw_value,
+            })
 
-            direction = None
-            if has_direction:
-                direction = str(row.get("direction", "")).strip().upper() or None
-                if keep_direction and direction != direction_target:
-                    continue
-
-            cycle_id = row.get("cycle") or row.get("stroke_no")
-            cycle_label = str(cycle_id).strip() if cycle_id is not None and str(cycle_id).strip() else None
-
-            rows.append(
-                {
-                    "order": order,
-                    "cycle_id": cycle_label,
-                    "direction": direction,
-                    "time_s": time_s,
-                    "position_mm": position_mm,
-                    "raw_value": _safe_int(row.get("raw_value")),
-                }
-            )
-
-    if has_direction and direction_filter.strip().upper() != "ALL" and not rows:
-        raise ValueError(
-            f"No rows matched direction filter {direction_filter!r} in {path.name}. Use --direction-filter ALL if needed."
-        )
     if not rows:
         raise ValueError(f"CSV {path} did not yield any usable data rows.")
-    return rows, fieldnames
+    return rows
 
 
 def _sort_cycle_key(value: str | None) -> tuple[int, object]:
@@ -252,38 +242,18 @@ def _sort_cycle_key(value: str | None) -> tuple[int, object]:
 
 
 def group_cycles(rows: list[dict]) -> list[tuple[str, list[dict]]]:
-    if any(row["cycle_id"] is not None for row in rows):
-        buckets: dict[str, list[dict]] = defaultdict(list)
-        for row in rows:
-            if row["cycle_id"] is None:
-                continue
-            buckets[row["cycle_id"]].append(row)
+    buckets: dict[str, list[dict]] = {}
+    for row in rows:
+        buckets.setdefault(row["cycle_id"], []).append(row)
 
-        grouped: list[tuple[str, list[dict]]] = []
-        for cycle_id in sorted(buckets.keys(), key=_sort_cycle_key):
-            ordered = sorted(buckets[cycle_id], key=lambda item: (item["time_s"], item["order"]))
-            grouped.append((cycle_id, ordered))
-        return grouped
-
-    ordered_rows = sorted(rows, key=lambda item: item["order"])
-    groups: list[list[dict]] = []
-    current_group: list[dict] = [ordered_rows[0]]
-    previous_time = ordered_rows[0]["time_s"]
-
-    for row in ordered_rows[1:]:
-        time_s = row["time_s"]
-        if time_s < previous_time - TIME_RESET_DROP_S:
-            groups.append(current_group)
-            current_group = [row]
-        else:
-            current_group.append(row)
-        previous_time = time_s
-
-    groups.append(current_group)
-    return [(str(index + 1), group) for index, group in enumerate(groups)]
+    grouped: list[tuple[str, list[dict]]] = []
+    for cycle_id in sorted(buckets.keys(), key=_sort_cycle_key):
+        ordered = sorted(buckets[cycle_id], key=lambda item: (item["time_s"], item["order"]))
+        grouped.append((cycle_id, ordered))
+    return grouped
 
 
-def summarize_cycle(cycle_id: str, cycle_index: int, rows: list[dict]) -> CycleSummary:
+def summarize_cycle(cycle_id: str, cycle_index: int, rows: list[dict], peak_window_s: float) -> CycleSummary:
     ordered = sorted(rows, key=lambda item: (item["time_s"], item["order"]))
     times = np.asarray([float(item["time_s"]) for item in ordered], dtype=float)
     positions = np.asarray([float(item["position_mm"]) for item in ordered], dtype=float)
@@ -304,6 +274,9 @@ def summarize_cycle(cycle_id: str, cycle_index: int, rows: list[dict]) -> CycleS
         mean_dt_s = float("nan")
         std_dt_s = float("nan")
 
+    peak_window_end_s = peak_time_s + max(peak_window_s, 0.0)
+    peak_window_samples = int(np.sum((times >= peak_time_s) & (times <= peak_window_end_s)))
+
     valid = peak_mm >= VALID_MIN_PEAK_MM
     undersampled = (
         len(ordered) < MIN_SAMPLES_PER_CYCLE
@@ -319,7 +292,7 @@ def summarize_cycle(cycle_id: str, cycle_index: int, rows: list[dict]) -> CycleS
     return CycleSummary(
         cycle_id=str(cycle_id),
         cycle_index=cycle_index,
-        direction=ordered[0].get("direction"),
+        direction=None,
         n_samples=len(ordered),
         start_s=start_s,
         end_s=end_s,
@@ -329,6 +302,7 @@ def summarize_cycle(cycle_id: str, cycle_index: int, rows: list[dict]) -> CycleS
         raw_value_at_peak=raw_value_at_peak,
         mean_dt_s=mean_dt_s,
         std_dt_s=std_dt_s,
+        peak_window_samples=peak_window_samples,
         valid=valid,
         undersampled=undersampled,
         signed_error_mm=signed_error_mm,
@@ -337,11 +311,17 @@ def summarize_cycle(cycle_id: str, cycle_index: int, rows: list[dict]) -> CycleS
     )
 
 
-def compute_session_summary(cycles: list[CycleSummary], ground_truth_mm: float, valid_min_mm: float) -> dict:
+def compute_session_summary(
+    cycles: list[CycleSummary],
+    ground_truth_mm: float,
+    valid_min_mm: float,
+    peak_window_ms: float,
+) -> dict:
     peaks = np.asarray([cycle.peak_mm for cycle in cycles], dtype=float)
     peak_times = np.asarray([cycle.peak_time_s for cycle in cycles], dtype=float)
     durations = np.asarray([cycle.duration_s for cycle in cycles], dtype=float)
     sample_counts = np.asarray([cycle.n_samples for cycle in cycles], dtype=float)
+    peak_window_counts = np.asarray([cycle.peak_window_samples for cycle in cycles], dtype=float)
     errors = peaks - ground_truth_mm
     cycle_numbers = np.asarray([cycle.cycle_index for cycle in cycles], dtype=float)
 
@@ -386,6 +366,9 @@ def compute_session_summary(cycles: list[CycleSummary], ground_truth_mm: float, 
         "peak_time_cv": float(peak_time_std / peak_time_mean) if peak_time_mean else float("nan"),
         "sample_mean": float(np.mean(sample_counts)),
         "sample_std": float(np.std(sample_counts, ddof=1)) if len(sample_counts) > 1 else 0.0,
+        "peak_window_mean": float(np.mean(peak_window_counts)),
+        "peak_window_std": float(np.std(peak_window_counts, ddof=1)) if len(peak_window_counts) > 1 else 0.0,
+        "peak_window_ms": float(peak_window_ms),
         "dt_mean_s": dt_mean,
         "dt_std_s": dt_std,
         "peak_trend": peak_trend,
@@ -417,6 +400,10 @@ def print_console_summary(source_path: Path, cycles: list[CycleSummary], summary
     print(
         f"Peak timing: {summary['peak_time_mean_s']:.3f} ± {summary['peak_time_std_s']:.3f} s  |  "
         f"Mean sample interval: {summary['dt_mean_s']:.3f} s"
+    )
+    print(
+        f"Peak-hold samples in {summary['peak_window_ms']:.1f} ms window: "
+        f"{summary['peak_window_mean']:.2f} ± {summary['peak_window_std']:.2f}"
     )
 
     if summary["peak_trend"] is not None:
@@ -487,13 +474,18 @@ def build_plots(
     show: bool = False,
 ) -> Path:
     trace_lookup = {cycle_id: rows for cycle_id, rows in grouped_rows}
+    cycle_lookup = {cycle.cycle_id: cycle for cycle in cycles}
 
     cycle_numbers = np.asarray([cycle.cycle_index for cycle in cycles], dtype=float)
     peaks = np.asarray([cycle.peak_mm for cycle in cycles], dtype=float)
     errors = peaks - summary["ground_truth_mm"]
+    margins = peaks - summary["valid_min_mm"]
     durations = np.asarray([cycle.duration_s for cycle in cycles], dtype=float)
     peak_times = np.asarray([cycle.peak_time_s for cycle in cycles], dtype=float)
-    sample_counts = np.asarray([cycle.n_samples for cycle in cycles], dtype=float)
+    peak_window_counts = np.asarray([cycle.peak_window_samples for cycle in cycles], dtype=float)
+    peak_window_ms = float(summary["peak_window_ms"])
+    zoom_left_ms = -ZOOM_WINDOW_PAD_MS
+    zoom_right_ms = peak_window_ms + ZOOM_WINDOW_PAD_MS
 
     fig = plt.figure(figsize=(20, 15), constrained_layout=False)
     fig.patch.set_facecolor(BG_COLOR)
@@ -518,12 +510,12 @@ def build_plots(
     )
 
     ax_trace = fig.add_subplot(gs[0, :])
-    ax_peak = fig.add_subplot(gs[1, 0])
+    ax_peak_zoom = fig.add_subplot(gs[1, 0])
     ax_error = fig.add_subplot(gs[1, 1])
-    ax_timing = fig.add_subplot(gs[2, 0])
-    ax_samples = fig.add_subplot(gs[2, 1])
+    ax_samples = fig.add_subplot(gs[2, 0])
+    ax_reliability = fig.add_subplot(gs[2, 1])
 
-    for ax in (ax_trace, ax_peak, ax_error, ax_timing, ax_samples):
+    for ax in (ax_trace, ax_peak_zoom, ax_error, ax_samples, ax_reliability):
         ax.set_facecolor("white")
         ax.grid(True, alpha=0.22, linewidth=0.7, color=GRID_COLOR)
         for spine in ax.spines.values():
@@ -576,15 +568,50 @@ def build_plots(
         loc="upper right",
     )
 
-    n_bins_peak = min(20, max(5, len(peaks)))
-    ax_peak.hist(peaks, bins=n_bins_peak, color=NEUTRAL_COLOR, alpha=0.72, edgecolor="white", linewidth=0.6)
-    ax_peak.axvline(np.mean(peaks), color="black", linewidth=2.0, linestyle="--", label=f"Mean {np.mean(peaks):.3f} mm")
-    ax_peak.axvline(summary["valid_min_mm"], color=FAIL_COLOR, linewidth=1.2, linestyle="--", label=f"Valid threshold {summary['valid_min_mm']:.1f} mm")
-    ax_peak.axvline(summary["ground_truth_mm"], color=NEUTRAL_COLOR, linewidth=1.2, linestyle=":", label=f"Ground truth {summary['ground_truth_mm']:.1f} mm")
-    ax_peak.set_xlabel("Detected peak position (mm)")
-    ax_peak.set_ylabel("Count")
-    ax_peak.set_title("Detected peak distribution", fontsize=10, fontweight="bold")
-    ax_peak.legend(fontsize=7, framealpha=0.9)
+    for cycle_id, rows in grouped_rows:
+        cycle = cycle_lookup.get(cycle_id)
+        if cycle is None or not rows:
+            continue
+        times = np.asarray([float(item["time_s"]) for item in rows], dtype=float)
+        positions = np.asarray([float(item["position_mm"]) for item in rows], dtype=float)
+        rel_ms = (times - float(cycle.peak_time_s)) * 1000.0
+        mask = (rel_ms >= zoom_left_ms) & (rel_ms <= zoom_right_ms)
+        if not np.any(mask):
+            continue
+        line_color = PASS_COLOR if cycle.valid else FAIL_COLOR
+        if cycle.undersampled and cycle.valid:
+            line_color = UNDER_COLOR
+        ax_peak_zoom.plot(rel_ms[mask], positions[mask], color=line_color, linewidth=1.6, alpha=0.85)
+        ax_peak_zoom.scatter(
+            rel_ms[mask],
+            positions[mask],
+            s=22,
+            color=line_color,
+            edgecolors="white",
+            linewidth=0.5,
+            alpha=0.95,
+            zorder=4,
+        )
+
+    ax_peak_zoom.axvspan(0.0, peak_window_ms, color=PASS_COLOR, alpha=0.12, label=f"Peak-count window ({peak_window_ms:.1f} ms)")
+    ax_peak_zoom.axvline(0.0, color=NEUTRAL_COLOR, linestyle=":", linewidth=1.2, label="Detected peak time")
+    ax_peak_zoom.axvline(peak_window_ms, color=NEUTRAL_COLOR, linestyle="--", linewidth=1.0)
+    ax_peak_zoom.axhline(summary["valid_min_mm"], color=FAIL_COLOR, linestyle="--", linewidth=1.0, label=f"Valid threshold {summary['valid_min_mm']:.1f} mm")
+    ax_peak_zoom.axhline(summary["ground_truth_mm"], color=NEUTRAL_COLOR, linestyle=":", linewidth=1.0, label=f"Ground truth {summary['ground_truth_mm']:.1f} mm")
+    ax_peak_zoom.set_xlim(zoom_left_ms, zoom_right_ms)
+    ax_peak_zoom.set_xlabel("Time relative to detected peak (ms)")
+    ax_peak_zoom.set_ylabel("Position (mm)")
+    ax_peak_zoom.set_title("Zoomed-in very peak view", fontsize=10, fontweight="bold")
+    ax_peak_zoom.text(
+        0.02,
+        0.98,
+        "Lines connect observed samples only; sparse/short left tails mean few pre-peak samples.",
+        transform=ax_peak_zoom.transAxes,
+        va="top",
+        fontsize=7,
+        bbox=dict(boxstyle="round,pad=0.25", facecolor="white", alpha=0.85, edgecolor="#CCCCCC"),
+    )
+    ax_peak_zoom.legend(fontsize=7, framealpha=0.9, loc="lower right")
 
     error_bins = min(20, max(5, len(errors)))
     ax_error.hist(errors, bins=error_bins, color=ACCENT_COLOR, alpha=0.72, edgecolor="white", linewidth=0.6)
@@ -595,53 +622,74 @@ def build_plots(
     ax_error.set_title("Peak error histogram", fontsize=10, fontweight="bold")
     ax_error.legend(fontsize=7, framealpha=0.9)
 
-    ax_timing.scatter(cycle_numbers, peak_times * 1000.0, s=28, color=NEUTRAL_COLOR, alpha=0.85, label="Peak time")
-    if summary["peak_time_trend"] is not None:
-        fit = summary["peak_time_trend"]
-        ax_timing.plot(cycle_numbers, (fit.slope * cycle_numbers + fit.intercept) * 1000.0, color=NEUTRAL_COLOR, linestyle="--", linewidth=1.5)
-    ax_timing.set_xlabel("Cycle #")
-    ax_timing.set_ylabel("Peak time from cycle start (ms)", color=NEUTRAL_COLOR)
-    ax_timing.tick_params(axis="y", labelcolor=NEUTRAL_COLOR)
-    ax_timing.set_title("Temporal consistency", fontsize=10, fontweight="bold")
-
-    ax_timing2 = ax_timing.twinx()
-    ax_timing2.scatter(cycle_numbers, durations * 1000.0, s=24, color=ACCENT_COLOR, alpha=0.75, marker="s", label="Cycle duration")
-    if summary["duration_trend"] is not None:
-        fit = summary["duration_trend"]
-        ax_timing2.plot(cycle_numbers, (fit.slope * cycle_numbers + fit.intercept) * 1000.0, color=ACCENT_COLOR, linestyle=":", linewidth=1.5)
-    ax_timing2.set_ylabel("Cycle duration (ms)", color=ACCENT_COLOR)
-    ax_timing2.tick_params(axis="y", labelcolor=ACCENT_COLOR)
-
-    trend_text = []
-    if summary["peak_time_trend"] is not None:
-        trend_text.append(f"peak slope {summary['peak_time_trend'].slope * 1000.0:+.2f} ms/cycle")
-    if summary["duration_trend"] is not None:
-        trend_text.append(f"duration slope {summary['duration_trend'].slope * 1000.0:+.2f} ms/cycle")
-    if trend_text:
-        ax_timing.text(
-            0.02,
-            0.97,
-            "\n".join(trend_text),
-            transform=ax_timing.transAxes,
-            va="top",
-            fontsize=8,
-            bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.88, edgecolor="#CCCCCC"),
+    mean_peak_window_samples = sum(float(value) for value in peak_window_counts) / len(peak_window_counts)
+    std_peak_window_samples = (
+        float(np.std(peak_window_counts, ddof=1)) if len(peak_window_counts) > 1 else 0.0
+    )
+    ax_samples.plot(cycle_numbers, peak_window_counts, color=UNDER_COLOR, linewidth=1.3, alpha=0.7)
+    ax_samples.scatter(cycle_numbers, peak_window_counts, color=UNDER_COLOR, edgecolors="white", linewidth=0.6, s=50, zorder=3)
+    ax_samples.axhline(mean_peak_window_samples, color="black", linestyle=":", linewidth=1.4, label=f"Mean {mean_peak_window_samples:.2f}")
+    if std_peak_window_samples > 0:
+        ax_samples.axhspan(
+            mean_peak_window_samples - std_peak_window_samples,
+            mean_peak_window_samples + std_peak_window_samples,
+            color=UNDER_COLOR,
+            alpha=0.12,
+            label=f"±1 SD ({std_peak_window_samples:.2f})",
         )
-
-    bins_samples = max(4, min(12, len(sample_counts)))
-    ax_samples.hist(sample_counts, bins=bins_samples, color=UNDER_COLOR, alpha=0.65, edgecolor="white", linewidth=0.6)
-    ax_samples.axvline(MIN_SAMPLES_PER_CYCLE, color=FAIL_COLOR, linestyle="--", linewidth=1.4, label=f"Undersample threshold {MIN_SAMPLES_PER_CYCLE} samples")
-    ax_samples.axvline(np.mean(sample_counts), color="black", linestyle=":", linewidth=1.4, label=f"Mean {np.mean(sample_counts):.1f} samples")
-    ax_samples.set_xlabel("Samples per cycle")
-    ax_samples.set_ylabel("Count")
-    ax_samples.set_title("Sampling density", fontsize=10, fontweight="bold")
+    ax_samples.set_xlabel("Cycle #")
+    ax_samples.set_ylabel("Peak-window sample count")
+    ax_samples.set_title("Sampling density at very peak by cycle", fontsize=10, fontweight="bold")
     ax_samples.legend(fontsize=7, framealpha=0.9)
+
+    n_bins_margin = min(16, max(5, len(margins)))
+    counts, bin_edges, _ = ax_reliability.hist(
+        margins,
+        bins=n_bins_margin,
+        color=NEUTRAL_COLOR,
+        alpha=0.65,
+        edgecolor="white",
+        linewidth=0.6,
+        label="Observed margin (peak - valid threshold)",
+    )
+    mean_margin = float(np.mean(margins))
+    std_margin = float(np.std(margins, ddof=1)) if len(margins) > 1 else 0.0
+    empirical_miss_rate = float(np.mean(margins < 0.0))
+    modeled_miss_rate = empirical_miss_rate
+
+    if len(margins) > 1 and std_margin > 0:
+        x_curve = np.linspace(float(np.min(margins)) - 0.2, float(np.max(margins)) + 0.2, 200)
+        bin_width = float(bin_edges[1] - bin_edges[0]) if len(bin_edges) > 1 else 1.0
+        pdf = stats.norm.pdf(x_curve, loc=mean_margin, scale=std_margin)
+        scaled_pdf = pdf * len(margins) * bin_width
+        ax_reliability.plot(x_curve, scaled_pdf, color=ACCENT_COLOR, linewidth=1.8, label="Normal fit")
+        modeled_miss_rate = float(stats.norm.cdf(0.0, loc=mean_margin, scale=std_margin))
+
+    ax_reliability.axvline(0.0, color=FAIL_COLOR, linestyle="--", linewidth=1.3, label="Miss boundary (margin=0)")
+    ax_reliability.axvspan(min(float(np.min(margins)), -0.2), 0.0, color=FAIL_COLOR, alpha=0.10)
+    ax_reliability.set_xlabel("Detection margin vs valid threshold (mm)")
+    ax_reliability.set_ylabel("Count")
+    ax_reliability.set_title("Lift-detection reliability margin", fontsize=10, fontweight="bold")
+    ax_reliability.legend(fontsize=7, framealpha=0.9)
+    ax_reliability.text(
+        0.02,
+        0.97,
+        (
+            f"Empirical miss rate: {empirical_miss_rate * 100:.2f}%\n"
+            f"Normal-model miss rate: {modeled_miss_rate * 100:.2f}%\n"
+            f"Margin mean ± SD: {mean_margin:+.3f} ± {std_margin:.3f} mm"
+        ),
+        transform=ax_reliability.transAxes,
+        va="top",
+        fontsize=8,
+        bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.88, edgecolor="#CCCCCC"),
+    )
 
     footer = (
         f"Failure rate: {summary['failure_rate'] * 100:.1f}%  |  "
         f"Peak mean: {summary['peak_mean_mm']:.3f} mm  |  "
         f"Error RMSE: {summary['error_rmse_mm']:.3f} mm  |  "
-        f"Duration CV: {summary['duration_cv'] * 100:.2f}%"
+        f"Peak-window mean samples: {summary['peak_window_mean']:.2f}"
     )
     fig.text(
         0.5,
@@ -663,14 +711,18 @@ def build_plots(
 
 
 def process_csv(path: Path, args: argparse.Namespace) -> None:
-    rows, _fieldnames = load_rows(path, direction_filter=args.direction_filter)
+    rows = load_rows(path)
     grouped_rows = group_cycles(rows)
-    cycles = [summarize_cycle(cycle_id, index + 1, cycle_rows) for index, (cycle_id, cycle_rows) in enumerate(grouped_rows)]
+    peak_window_s = max(args.peak_window_ms, 0.0) / 1000.0
+    cycles = [
+        summarize_cycle(cycle_id, index + 1, cycle_rows, peak_window_s)
+        for index, (cycle_id, cycle_rows) in enumerate(grouped_rows)
+    ]
 
     if not cycles:
         raise ValueError(f"No complete cycles were found in {path}")
 
-    summary = compute_session_summary(cycles, args.ground_truth_mm, args.valid_min_mm)
+    summary = compute_session_summary(cycles, args.ground_truth_mm, args.valid_min_mm, args.peak_window_ms)
     print_console_summary(path, cycles, summary)
 
     output_dir = args.output_dir if args.output_dir else path.parent / f"{path.stem}_min_peak_validation"
