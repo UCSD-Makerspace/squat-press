@@ -116,6 +116,7 @@ void stepperTest()
 
         // -- upward phase --
         stepper_driver.disableInverseMotorDirection();
+        digitalWrite(RPI_SYNC_PIN, HIGH);
         for (int i = 0; i < NUM_UP_SEGMENTS; i++)
         {
             stepper_driver.moveAtVelocity(static_cast<int>(upVelocities[i] * SPEED_MULTIPLIER * UP_TRIM));
@@ -134,10 +135,11 @@ void stepperTest()
             delay(static_cast<int>(downTimesMs[i] / SPEED_MULTIPLIER));
         }
         stepper_driver.moveAtVelocity(0);
+        digitalWrite(RPI_SYNC_PIN, LOW);
 
         // disable motor and wait before next rep
         stepper_driver.disable();
-        delay(5500); // 5.5s settle between reps
+        delay(5500);
         
     }
 
