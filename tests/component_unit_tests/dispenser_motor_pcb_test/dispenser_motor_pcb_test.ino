@@ -2,9 +2,8 @@
 #include "A4988.h"
 
 #define MOTOR_STEPS 200
-#define RPM 10
+#define RPM 30
 
-// Pin mapping from your PCB layout
 #define STEP_PIN 3
 #define DIR_PIN 2
 #define EN_PIN 9
@@ -12,37 +11,57 @@
 #define SLP_PIN 4
 #define FEED_BTN 15
 
-// Use the 7-argument constructor supported by your library
-// Format: steps, dir, step, enable, ms1, ms2, ms3
-A4988 stepper(MOTOR_STEPS, DIR_PIN, STEP_PIN, EN_PIN, RST_PIN, SLP_PIN, FEED_BTN);
+// #define BEAM_BREAK_PIN 16 
 
-void setup()
-{
+A4988 stepper(MOTOR_STEPS, DIR_PIN, STEP_PIN, EN_PIN);
+
+void dispense() {
+  Serial.println("STATUS:DISPENSING");
+  digitalWrite(SLP_PIN, HIGH); // Wake up driver
+  delay(2);                    // Minimal wake-up time for A4988
+  
+  stepper.rotate(51);
+  
+  // Optional: Check beam break here to verify pellet drop
+  // if(digitalRead(BEAM_BREAK_PIN) == LOW) { Serial.println("STATUS:SUCCESS"); }
+  
+  digitalWrite(SLP_PIN, LOW);  // Put driver back to sleep to save power/heat
+  Serial.println("STATUS:READY");
+}
+
+void setup() {
   Serial.begin(115200);
 
-  // Manually handle the pins the library doesn't cover
+  pinMode(EN_PIN, OUTPUT);
   pinMode(RST_PIN, OUTPUT);
   pinMode(SLP_PIN, OUTPUT);
+  pinMode(FEED_BTN, INPUT_PULLDOWN);
+  // pinMode(BEAM_BREAK_PIN, INPUT_PULLUP);
 
-  // A4988 requires RST and SLP to be HIGH to run
   digitalWrite(RST_PIN, HIGH);
-  digitalWrite(SLP_PIN, HIGH);
-
-  delay(1000);
-
+  digitalWrite(SLP_PIN, LOW);  // Start in sleep mode to prevent motor hiss
+  digitalWrite(EN_PIN, LOW);
+  
   stepper.begin(RPM);
   stepper.setEnableActiveState(LOW);
   stepper.enable();
-
-  // Set microstepping to 1 (Full Step)
-  stepper.setMicrostep(1);
-
-  Serial.println("Stepper ready and awake.");
+  
+  Serial.println("SYSTEM:INITIALIZED");
 }
 
-void loop()
-{
-  Serial.println("Rotating 45 degrees...");
-  stepper.rotate(45);
-  delay(10000);
+void loop() {
+  // 1. Check for Command from Raspberry Pi (USB Serial)
+  if (Serial.available() > 0) {
+    char cmd = Serial.read();
+    if (cmd == 'D') {          // 'D' for Dispense
+      dispense();
+    }
+  }
+
+  // 2. Check for Physical Manual Feed Button
+  if (digitalRead(FEED_BTN) == HIGH) {
+    delay(50);                 // Debounce
+    dispense();
+    while(digitalRead(FEED_BTN) == HIGH); // Wait for release
+  }
 }
