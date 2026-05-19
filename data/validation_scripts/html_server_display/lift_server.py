@@ -27,21 +27,21 @@ _HTML = """
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-      background: #0d0d0d; color: #e0e0e0;
+      background: #0d0d0d; color: #f0f0f0;
       max-width: 780px; margin: 0 auto; padding: 40px 24px 80px;
     }
-    h1 { font-size: 0.85rem; color: #555; letter-spacing: 0.18em;
+    h1 { font-size: 0.85rem; color: #999; letter-spacing: 0.18em;
          text-transform: uppercase; margin-bottom: 28px; }
-    h2 { font-size: 0.75rem; color: #555; letter-spacing: 0.14em;
+    h2 { font-size: 0.75rem; color: #999; letter-spacing: 0.14em;
          text-transform: uppercase; margin: 36px 0 12px; }
 
     /* ── Metadata table ── */
     table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-    td { padding: 10px 0; border-bottom: 1px solid #1e1e1e; vertical-align: top; }
+    td { padding: 10px 0; border-bottom: 1px solid #2a2a2a; vertical-align: top; }
     td:first-child { width: 52%; padding-right: 16px; }
-    .label { color: #888; font-size: 0.9rem; }
-    .sublabel { color: #4a4a4a; font-size: 0.72rem; margin-top: 3px; line-height: 1.35; }
-    .value { color: #f0f0f0; font-size: 1.05rem; }
+    .label   { color: #c0c0c0; font-size: 0.9rem; }
+    .sublabel{ color: #6a6a6a; font-size: 0.72rem; margin-top: 3px; line-height: 1.35; }
+    .value   { color: #ffffff; font-size: 1.05rem; }
 
     /* ── Graphs ── */
     .graph-wrap { position: relative; margin-top: 4px; }
@@ -49,27 +49,41 @@ _HTML = """
     .graph-wrap img.hidden { display: none; }
     .dl-btn {
       display: inline-block; margin-top: 8px;
-      font-size: 0.72rem; color: #555; text-decoration: none;
-      border: 1px solid #2a2a2a; border-radius: 3px;
+      font-size: 0.72rem; color: #888; text-decoration: none;
+      border: 1px solid #3a3a3a; border-radius: 3px;
       padding: 3px 10px; transition: color 0.15s, border-color 0.15s;
     }
-    .dl-btn:hover { color: #aaa; border-color: #555; }
+    .dl-btn:hover { color: #ddd; border-color: #777; }
 
     /* ── Hz stats ── */
     #hz-stats {
       margin-top: 14px; padding: 14px 16px;
-      background: #111; border: 1px solid #1e1e1e; border-radius: 4px;
-      font-size: 0.82rem; color: #888; line-height: 1.9;
+      background: #111; border: 1px solid #2a2a2a; border-radius: 4px;
+      font-size: 0.82rem; color: #b8b8b8; line-height: 1.9;
     }
-    #hz-stats .hl { color: #c4b5fd; }
+    #hz-stats .hl { color: #d4c5ff; }
+
+    /* ── Error explanation ── */
+    #hz-explain {
+      margin-top: 12px; padding: 14px 16px;
+      background: #0f0f0f; border: 1px solid #2a2a2a; border-radius: 4px;
+      font-size: 0.79rem; color: #909090; line-height: 1.8;
+    }
+    #hz-explain strong { color: #c0c0c0; display: block; margin-bottom: 6px; }
+    #hz-explain .formula {
+      margin: 10px 0; padding: 8px 12px;
+      background: #1a1a1a; border-radius: 3px;
+      color: #c4b5fd; letter-spacing: 0.03em;
+    }
+    #hz-explain .note { color: #666; margin-top: 8px; font-size: 0.74rem; }
 
     /* ── Status bar ── */
-    #status { margin-top: 32px; font-size: 0.7rem; color: #333; }
-    .waiting { color: #333; font-style: italic; }
+    #status { margin-top: 32px; font-size: 0.7rem; color: #555; }
+    .waiting { color: #555; font-style: italic; }
   </style>
 </head>
 <body>
-  <h1>Linear Sensor &mdash; Live Lift Dashboard</h1>
+  <h1>Linear Sensor Live Lift Dashboard</h1>
 
   <table id="tbl">
     <tr><td colspan="2" class="waiting">Waiting for first lift&hellip;</td></tr>
@@ -89,6 +103,28 @@ _HTML = """
     <a id="hz-dl" class="dl-btn" href="#" download="hz_distribution.png">Download PNG</a>
   </div>
   <div id="hz-stats">Waiting for first lift&hellip;</div>
+
+  <div id="hz-explain">
+    <strong>How is the worst-case position error calculated?</strong>
+    The sensor samples at ~200 Hz, but not at perfectly even intervals — the gap
+    between consecutive samples varies slightly. This variation is called
+    <em>timing jitter</em>, measured as the standard deviation of all inter-sample
+    intervals within the cycle.
+    <br><br>
+    If the sensor is moving at velocity <em>v</em> (mm/s) and timing is uncertain
+    by &sigma;<sub>t</sub> seconds, the position reading could be off by:
+    <div class="formula">
+      &plusmn; position error &nbsp;=&nbsp; max_velocity (mm/s) &nbsp;&times;&nbsp; &sigma;<sub>t</sub> (s)
+    </div>
+    We use the <em>maximum</em> observed velocity (not the average) because that
+    is the hardest case — it occurs during the fast acceleration phase of the lift
+    (~85 mm/s), not at the slow dwell near the peak. This is a conservative 1&sigma;
+    bound: ~68% of samples fall within this error, ~95% within 2&times; this value.
+    <div class="note">
+      Example: at 85 mm/s with 1 ms timing std &rarr; &plusmn;0.085 mm worst-case.
+      Near the peak (&lt;12 mm/s) the same jitter gives &lt;&plusmn;0.012 mm.
+    </div>
+  </div>
 
   <div id="status"></div>
 
