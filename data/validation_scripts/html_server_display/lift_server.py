@@ -52,7 +52,7 @@ _HTML = """
   </style>
 </head>
 <body>
-  <h1>SQUAT / PRESS — LIVE LIFT</h1>
+  <h1>Linear Sensor Lift Dashboard</h1>
   <table id="tbl">
     <tr><td>Waiting for first lift...</td><td></td></tr>
   </table>

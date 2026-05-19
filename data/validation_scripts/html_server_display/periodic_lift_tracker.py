@@ -1,9 +1,12 @@
 """
-GPIO SYNC — per-sample CSV logger with per-cycle lift summary + live dashboard
-==============================================================================
-GPIO pin (BCM 21) from ESP32 gates logging:
-  HIGH → cycle start (t=0), begin buffering samples
-  LOW  → cycle end, flush CSV, compute peak stats, push to dashboard
+Dual-mode lift detector — GPIO sync + software rolling-average fallback
+=======================================================================
+Detection priority:
+  1. GPIO pin (BCM 21) from ESP32 — HIGH = cycle start, LOW = cycle end
+  2. Software threshold — rolling average of last SW_WINDOW samples crosses
+     SW_LIFT_THRESHOLD_MM to start a cycle, drops back below to end it
+
+Whichever fires first starts the cycle. GPIO takes priority when both active.
 
 Per-sample CSV: data/csv/YYYY.MM.DD/gpio_sensorN_HHMMSS.csv
   columns: cycle, time_s, position_mm, raw_value
@@ -15,14 +18,17 @@ import serial
 import time
 import csv
 import threading
+from collections import deque
 from pathlib import Path
 from datetime import datetime
 from lift_server import start_server, update_latest_lift
 import RPi.GPIO as GPIO
 
-BAUD_RATE         = 115200
-SYNC_GPIO_PIN     = 21
-PEAK_THRESHOLD_MM = 19.0
+BAUD_RATE            = 115200
+SYNC_GPIO_PIN        = 21
+PEAK_THRESHOLD_MM    = 19.0
+SW_LIFT_THRESHOLD_MM = 0.1   # rolling avg above this → software cycle start
+SW_WINDOW            = 10    # number of samples in the rolling average
 
 # file lives at data/validation_scripts/html_server_display/periodic_lift_tracker.py
 # parents[3] is the project root
@@ -159,6 +165,13 @@ def main():
     cycle_samples = []
     active_cyc    = None   # (cyc_num, cyc_start_abs, prev_start_abs)
 
+    # Software detection state
+    sw_window     = deque(maxlen=SW_WINDOW)
+    sw_in_cycle   = False
+    sw_cyc_start  = None
+    sw_last_start = None
+    sw_cyc_count  = 0
+
     try:
         while True:
             t0 = time.time()
@@ -171,17 +184,53 @@ def main():
                     count += 1
                 except: pass
 
+            # ── GPIO state ────────────────────────────────────────────────────
             with _lock:
-                in_cycle   = _in_cycle
-                cyc_start  = _cycle_start_time
-                cyc        = _cycle_count
-                last_start = _last_cycle_start
+                gpio_in_cycle  = _in_cycle
+                gpio_cyc_start = _cycle_start_time
+                gpio_cyc       = _cycle_count
+                gpio_last_start = _last_cycle_start
+
+            # ── Software rolling-average detection ────────────────────────────
+            if mm is not None:
+                sw_window.append(mm)
+
+            if len(sw_window) == SW_WINDOW:
+                sw_avg = sum(sw_window) / SW_WINDOW
+
+                if not sw_in_cycle and sw_avg > SW_LIFT_THRESHOLD_MM:
+                    sw_last_start = sw_cyc_start
+                    sw_cyc_start  = t0
+                    sw_cyc_count += 1
+                    sw_in_cycle   = True
+                    print(f"\n>>> [SW] CYCLE {sw_cyc_count} STARTED  {datetime.fromtimestamp(t0).strftime('%H:%M:%S')}")
+
+                elif sw_in_cycle and sw_avg <= SW_LIFT_THRESHOLD_MM:
+                    sw_in_cycle = False
+                    print(f">>> [SW] CYCLE {sw_cyc_count} ENDED")
+
+            # ── Combine: GPIO takes priority, SW is fallback ───────────────────
+            if gpio_in_cycle:
+                in_cycle   = True
+                cyc_start  = gpio_cyc_start
+                cyc        = gpio_cyc
+                last_start = gpio_last_start
+            elif sw_in_cycle:
+                in_cycle   = True
+                cyc_start  = sw_cyc_start
+                cyc        = sw_cyc_count
+                last_start = sw_last_start
+            else:
+                in_cycle   = False
+                cyc_start  = None
+                cyc        = max(gpio_cyc, sw_cyc_count)
+                last_start = None
 
             if max_cycles > 0 and cyc > max_cycles:
                 print(f"\nReached max cycles ({max_cycles}). Stopping.")
                 break
 
-            # Rising edge: new cycle started — reset buffer and snapshot metadata
+            # Rising edge: reset buffer and snapshot metadata
             if in_cycle and not prev_in_cycle:
                 cycle_samples = []
                 active_cyc    = (cyc, cyc_start, last_start)
@@ -193,7 +242,7 @@ def main():
                 f.flush()
                 cycle_samples.append({'time_s': t_rel, 'mm': round(mm, 4)})
 
-            # Falling edge: cycle just ended — compute stats and push to dashboard
+            # Falling edge: compute stats and push to dashboard
             if prev_in_cycle and not in_cycle and cycle_samples and active_cyc:
                 _finish_cycle(*active_cyc, cycle_samples)
                 cycle_samples = []
@@ -202,8 +251,8 @@ def main():
 
             now = time.time()
             if now - t_report >= 5.0:
-                hz = count / (now - t_report)
-                print(f"[sampler] {hz:.0f} Hz")
+                sw_avg_disp = f"{sum(sw_window)/len(sw_window):.2f}" if sw_window else "—"
+                print(f"[sampler] {count / (now - t_report):.0f} Hz  |  sw_avg {sw_avg_disp} mm")
                 count = 0; t_report = now
 
     except KeyboardInterrupt:
