@@ -105,25 +105,11 @@ _HTML = """
   <div id="hz-stats">Waiting for first lift&hellip;</div>
 
   <div id="hz-explain">
-    <strong>How is the worst-case position error calculated?</strong>
-    The sensor samples at ~200 Hz, but not at perfectly even intervals — the gap
-    between consecutive samples varies slightly. This variation is called
-    <em>timing jitter</em>, measured as the standard deviation of all inter-sample
-    intervals within the cycle.
-    <br><br>
-    If the sensor is moving at velocity <em>v</em> (mm/s) and timing is uncertain
-    by &sigma;<sub>t</sub> seconds, the position reading could be off by:
-    <div class="formula">
-      &plusmn; position error &nbsp;=&nbsp; max_velocity (mm/s) &nbsp;&times;&nbsp; &sigma;<sub>t</sub> (s)
-    </div>
-    We use the <em>maximum</em> observed velocity (not the average) because that
-    is the hardest case — it occurs during the fast acceleration phase of the lift
-    (~85 mm/s), not at the slow dwell near the peak. This is a conservative 1&sigma;
-    bound: ~68% of samples fall within this error, ~95% within 2&times; this value.
-    <div class="note">
-      Example: at 85 mm/s with 1 ms timing std &rarr; &plusmn;0.085 mm worst-case.
-      Near the peak (&lt;12 mm/s) the same jitter gives &lt;&plusmn;0.012 mm.
-    </div>
+    <strong>Position error bound</strong>
+    &plusmn;&epsilon; = v<sub>max</sub> &times; &sigma;(&#916;t) &nbsp;&mdash;&nbsp;
+    v<sub>max</sub> from consecutive position deltas, &sigma;(&#916;t) from inter-sample interval std.
+    Uses peak velocity (acceleration phase, not dwell) so the bound is conservative.
+    <div class="note">e.g. 85 mm/s &times; 1 ms std &rarr; &plusmn;0.085 mm; at the 19 mm dwell (&lt;12 mm/s) &rarr; &lt;&plusmn;0.012 mm.</div>
   </div>
 
   <div id="status"></div>
