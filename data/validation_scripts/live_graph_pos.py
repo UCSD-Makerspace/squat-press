@@ -45,15 +45,15 @@ def interpolate(raw):
             return mm1 + (raw - r1) / (r2 - r1) * (mm2 - mm1)
     return None
 
+HZ_SMOOTH_N = 30   # rolling window size for Hz estimate (samples)
+
 _lock  = threading.Lock()
 _times = deque(maxlen=MAX_PTS)
 _pos   = deque(maxlen=MAX_PTS)
-_hz    = deque(maxlen=MAX_PTS)
 
 def _reader(port):
-    ser    = serial.Serial(port, BAUD_RATE, timeout=0.02)
-    t0     = time.perf_counter()
-    t_prev = None
+    ser = serial.Serial(port, BAUD_RATE, timeout=0.02)
+    t0  = time.perf_counter()
     while True:
         ser.write(b'F')
         resp = ser.readline().decode('ascii', errors='replace').strip()
@@ -62,14 +62,9 @@ def _reader(port):
                 raw = int(resp.split()[0], 16)
                 mm  = interpolate(raw)
                 if mm is not None:
-                    t_now = time.perf_counter()
-                    hz    = 1.0 / (t_now - t_prev) if t_prev is not None else None
-                    t_prev = t_now
                     with _lock:
-                        _times.append(t_now - t0)
+                        _times.append(time.perf_counter() - t0)
                         _pos.append(mm)
-                        if hz is not None:
-                            _hz.append(hz)
             except Exception:
                 pass
 
@@ -118,7 +113,7 @@ def main():
     ax_pos.legend(fontsize=8, facecolor='#1a1a1a', labelcolor='#ccc', edgecolor='#333')
 
     # hz subplot
-    (line_hz,) = ax_hz.plot([], [], color='#a78bfa', linewidth=1.0)
+    (line_hz,) = ax_hz.plot([], [], color='#a78bfa', linewidth=1.2)
     ax_hz.set_xlim(0, WINDOW_S)
     ax_hz.set_ylim(0, 350)
     ax_hz.set_xlabel('Time (s)', color='#aaa')
@@ -133,7 +128,6 @@ def main():
                 return (line_pos, line_hz)
             ts = list(_times)
             ps = list(_pos)
-            hs = list(_hz)
 
         t_now  = ts[-1]
         cutoff = t_now - WINDOW_S
@@ -146,17 +140,21 @@ def main():
 
         ts_win = ts[start:]
         ps_win = ps[start:]
-
         line_pos.set_data(ts_win, ps_win)
         ax_pos.set_xlim(t_now - WINDOW_S, t_now)
 
-        # hz deque is one sample shorter than _times (no dt for first sample)
-        hz_ts = ts[1:]   # align: hz[i] corresponds to times[i+1]
-        hz_start = max(0, start - 1)
-        hz_ts_win = hz_ts[hz_start:]
-        hs_win    = hs[hz_start:]
-        if hz_ts_win and hs_win:
-            line_hz.set_data(hz_ts_win, hs_win)
+        # Hz: N / (t[i] - t[i-N]) — averages out per-sample jitter
+        N = HZ_SMOOTH_N
+        if len(ts) > N:
+            hz_ts = ts[N:]
+            hz_vals = [N / (ts[i] - ts[i - N]) for i in range(N, len(ts))]
+            # trim to visible window
+            hz_start = 0
+            for i, t in enumerate(hz_ts):
+                if t >= cutoff:
+                    hz_start = i
+                    break
+            line_hz.set_data(hz_ts[hz_start:], hz_vals[hz_start:])
         ax_hz.set_xlim(t_now - WINDOW_S, t_now)
 
         return (line_pos, line_hz)
