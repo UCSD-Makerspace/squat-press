@@ -155,7 +155,7 @@ def main():
 
     for ax in (ax_pos, ax_hz):
         ax.set_facecolor('#141414')
-        ax.tick_params(colors='#888')
+        ax.tick_params(colors='#888', right=True, labelright=True)
         for spine in ax.spines.values():
             spine.set_edgecolor('#333')
         ax.grid(True, alpha=0.15, color='#555')
@@ -203,6 +203,13 @@ def main():
             _rec_buffer = []
             _rec_t0     = time.perf_counter()
             _recording  = True
+        # grey out start button to signal active recording
+        btn_start.label.set_text('Recording in progress…')
+        btn_start.label.set_color('#555555')
+        btn_start.color        = '#161616'
+        btn_start.hovercolor   = '#161616'
+        ax_start.set_facecolor('#161616')
+        fig.canvas.draw_idle()
         rec_text.set_text('● Recording…')
         rec_text.set_color('#ff6b6b')
         print("Recording started.")
@@ -214,6 +221,13 @@ def main():
                 return
             _recording = False
             snapshot   = list(_rec_buffer)
+        # restore start button
+        btn_start.label.set_text('Start Recording')
+        btn_start.label.set_color('#cccccc')
+        btn_start.color        = '#1e1e1e'
+        btn_start.hovercolor   = '#2a2a2a'
+        ax_start.set_facecolor('#1e1e1e')
+        fig.canvas.draw_idle()
         rec_text.set_text(f'Saved {len(snapshot)} samples — see file dialog')
         rec_text.set_color('#888')
         print(f"Recording stopped ({len(snapshot)} samples). Opening save dialog…")
