@@ -122,7 +122,7 @@ def _save_csv(buffer):
     root = tk.Tk()
     root.withdraw()
     root.lift()
-    default_name = f"live_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    default_name = f"sensor{sensor_num}_live_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     path = filedialog.asksaveasfilename(
         title="Save recording as…",
         defaultextension=".csv",
@@ -142,12 +142,15 @@ def _save_csv(buffer):
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    global _recording, _rec_buffer, _rec_t0
+    global _recording, _rec_buffer, _rec_t0, sensor_num
 
     port = _pick_port()
     print(f"Connecting to {port} ...")
     threading.Thread(target=_reader, args=(port,), daemon=True).start()
 
+    # get sensor number from user input to append to csv name
+    sensor_num = input("Enter sensor number of linear sensor (e.g. 1, 2, 3): ").strip()
+    
     # leave room at bottom for buttons
     fig, (ax_pos, ax_hz) = plt.subplots(2, 1, figsize=(11, 7), sharex=False)
     fig.patch.set_facecolor('#0d0d0d')
