@@ -4,26 +4,33 @@ live_graph_pos.py — Live scrolling position graph for the linear sensor
 Plug the sensor USB directly into this laptop.
 Shows the last WINDOW_S seconds of position data in real time.
 
+Start/Stop buttons toggle CSV recording independently of the live graph.
+On Stop a file-save dialog opens to choose where to write the CSV.
+
 Usage:
     python live_graph_pos.py              # auto-detect or prompt for port
     python live_graph_pos.py COM3         # Windows
     python live_graph_pos.py /dev/ttyACM0 # Linux / Pi
 """
 
+import csv
 import sys
 import time
 import threading
 from collections import deque
+from datetime import datetime
 
 import serial
 import serial.tools.list_ports
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from matplotlib.widgets import Button
 
-BAUD_RATE = 115200
-WINDOW_S  = 10.0   # seconds of history shown in the scrolling plot
-PEAK_MM   = 19.0   # horizontal reference line
-MAX_PTS   = 6000   # ring buffer (~30 s at 200 Hz)
+BAUD_RATE   = 115200
+WINDOW_S    = 10.0   # seconds of history shown in the scrolling plot
+PEAK_MM     = 19.0   # horizontal reference line
+MAX_PTS     = 6000   # ring buffer (~30 s at 200 Hz)
+HZ_SMOOTH_N = 30     # rolling window size for Hz estimate (samples)
 
 CALIBRATION_TABLE = [
     (0.000, 10615), (1.000, 10444), (2.000, 10284), (3.000, 10136),
@@ -45,11 +52,21 @@ def interpolate(raw):
             return mm1 + (raw - r1) / (r2 - r1) * (mm2 - mm1)
     return None
 
-HZ_SMOOTH_N = 30   # rolling window size for Hz estimate (samples)
+# ── Shared sensor state ───────────────────────────────────────────────────────
 
 _lock  = threading.Lock()
 _times = deque(maxlen=MAX_PTS)
 _pos   = deque(maxlen=MAX_PTS)
+_raw   = deque(maxlen=MAX_PTS)
+
+# ── Recording state ───────────────────────────────────────────────────────────
+
+_rec_lock   = threading.Lock()
+_recording  = False
+_rec_buffer = []   # list of (time_s, position_mm, raw_value)
+_rec_t0     = None
+
+# ── Serial reader thread ──────────────────────────────────────────────────────
 
 def _reader(port):
     ser = serial.Serial(port, BAUD_RATE, timeout=0.02)
@@ -59,14 +76,25 @@ def _reader(port):
         resp = ser.readline().decode('ascii', errors='replace').strip()
         if resp:
             try:
-                raw = int(resp.split()[0], 16)
-                mm  = interpolate(raw)
+                raw_val = int(resp.split()[0], 16)
+                mm      = interpolate(raw_val)
                 if mm is not None:
+                    t_now = time.perf_counter()
                     with _lock:
-                        _times.append(time.perf_counter() - t0)
+                        _times.append(t_now - t0)
                         _pos.append(mm)
+                        _raw.append(raw_val)
+                    with _rec_lock:
+                        if _recording:
+                            _rec_buffer.append((
+                                round(t_now - _rec_t0, 5),
+                                round(mm, 4),
+                                raw_val,
+                            ))
             except Exception:
                 pass
+
+# ── Port picker ───────────────────────────────────────────────────────────────
 
 def _pick_port():
     if len(sys.argv) > 1:
@@ -86,14 +114,44 @@ def _pick_port():
     idx = int(input("Select port number: ").strip())
     return ports[idx]
 
+# ── CSV save ──────────────────────────────────────────────────────────────────
+
+def _save_csv(buffer):
+    import tkinter as tk
+    from tkinter import filedialog
+    root = tk.Tk()
+    root.withdraw()
+    root.lift()
+    default_name = f"live_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    path = filedialog.asksaveasfilename(
+        title="Save recording as…",
+        defaultextension=".csv",
+        filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+        initialfile=default_name,
+    )
+    root.destroy()
+    if not path:
+        print("Save cancelled.")
+        return
+    with open(path, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["time_s", "position_mm", "raw_value"])
+        w.writerows(buffer)
+    print(f"Saved {len(buffer)} rows → {path}")
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
 def main():
+    global _recording, _rec_buffer, _rec_t0
+
     port = _pick_port()
     print(f"Connecting to {port} ...")
-
     threading.Thread(target=_reader, args=(port,), daemon=True).start()
 
+    # leave room at bottom for buttons
     fig, (ax_pos, ax_hz) = plt.subplots(2, 1, figsize=(11, 7), sharex=False)
     fig.patch.set_facecolor('#0d0d0d')
+    fig.subplots_adjust(bottom=0.13, hspace=0.35)
 
     for ax in (ax_pos, ax_hz):
         ax.set_facecolor('#141414')
@@ -120,7 +178,51 @@ def main():
     ax_hz.set_ylabel('Sampling rate (Hz)', color='#aaa')
     ax_hz.set_title('Live Sampling Frequency', color='#ddd', pad=8)
 
-    fig.tight_layout(pad=2.0)
+    # recording status text
+    rec_text = fig.text(0.5, 0.055, '', ha='center', va='center',
+                        fontsize=9, color='#888',
+                        fontfamily='monospace')
+
+    # ── Buttons ───────────────────────────────────────────────────────────────
+    btn_style = dict(color='#1e1e1e', hovercolor='#2a2a2a')
+
+    ax_start = fig.add_axes([0.32, 0.02, 0.14, 0.04])
+    ax_stop  = fig.add_axes([0.54, 0.02, 0.14, 0.04])
+    btn_start = Button(ax_start, 'Start Recording', **btn_style)
+    btn_stop  = Button(ax_stop,  'Stop Recording',  **btn_style)
+
+    for btn in (btn_start, btn_stop):
+        btn.label.set_fontsize(8.5)
+        btn.label.set_color('#cccccc')
+
+    def on_start(_event):
+        global _recording, _rec_buffer, _rec_t0
+        with _rec_lock:
+            if _recording:
+                return
+            _rec_buffer = []
+            _rec_t0     = time.perf_counter()
+            _recording  = True
+        rec_text.set_text('● Recording…')
+        rec_text.set_color('#ff6b6b')
+        print("Recording started.")
+
+    def on_stop(_event):
+        global _recording
+        with _rec_lock:
+            if not _recording:
+                return
+            _recording = False
+            snapshot   = list(_rec_buffer)
+        rec_text.set_text(f'Saved {len(snapshot)} samples — see file dialog')
+        rec_text.set_color('#888')
+        print(f"Recording stopped ({len(snapshot)} samples). Opening save dialog…")
+        threading.Thread(target=_save_csv, args=(snapshot,), daemon=True).start()
+
+    btn_start.on_clicked(on_start)
+    btn_stop.on_clicked(on_stop)
+
+    # ── Animation ─────────────────────────────────────────────────────────────
 
     def update(_frame):
         with _lock:
@@ -138,17 +240,13 @@ def main():
                 start = i
                 break
 
-        ts_win = ts[start:]
-        ps_win = ps[start:]
-        line_pos.set_data(ts_win, ps_win)
+        line_pos.set_data(ts[start:], ps[start:])
         ax_pos.set_xlim(t_now - WINDOW_S, t_now)
 
-        # Hz: N / (t[i] - t[i-N]) — averages out per-sample jitter
         N = HZ_SMOOTH_N
         if len(ts) > N:
-            hz_ts = ts[N:]
+            hz_ts   = ts[N:]
             hz_vals = [N / (ts[i] - ts[i - N]) for i in range(N, len(ts))]
-            # trim to visible window
             hz_start = 0
             for i, t in enumerate(hz_ts):
                 if t >= cutoff:
