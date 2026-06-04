@@ -162,6 +162,12 @@ def _split_colors(ts_win, ps_win, threshold, min_lift_s):
                 for j in range(run_start, run_end):
                     ps_green[j] = ps_win[j]
                     ps_blue[j]  = _nan
+                # Share one boundary point on each side so the two lines
+                # meet with no gap at the threshold crossing
+                if run_start > 0:
+                    ps_green[run_start - 1] = ps_win[run_start - 1]
+                if run_end < n:
+                    ps_green[run_end] = ps_win[run_end]
         else:
             i += 1
 
