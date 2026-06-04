@@ -226,10 +226,10 @@ def main():
 
     port = _pick_port()
     default_threshold = float(
-        input("Lift detection threshold (mm) [19.0]: ").strip() or 19.0
+        input("Enter lift detection threshold (mm) [Enter nothing for 19.0mm default]: ").strip() or 19.0
     )
     default_min_lift = float(
-        input("Minimum time above threshold for a valid lift (s) [0.040]: ").strip() or 0.040
+        input("Enter minimum time above threshold for a valid lift (s) [Enter nothing for 0.040mm default]: ").strip() or 0.040
     )
     threshold  = [default_threshold]
     min_lift_s = [default_min_lift]
