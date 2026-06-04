@@ -296,32 +296,13 @@ def main():
     btn_style = dict(color='#1e1e1e', hovercolor='#2a2a2a')
     tb_style  = dict(color='#1a1a1a', hovercolor='#222222')
 
-    # Threshold TextBox
-    fig.text(0.010, 0.065, 'Threshold\n(mm):', ha='left', va='center',
-             fontsize=11, color='#cccccc', fontfamily='monospace')
-    ax_tb_thresh = fig.add_axes([0.105, 0.040, 0.082, 0.048])
-    tb_thresh = TextBox(ax_tb_thresh, '', initial=str(default_threshold), **tb_style)
-    tb_thresh.text_disp.set_color('#cccccc')
-    tb_thresh.text_disp.set_fontsize(13)
-
     # Min lift TextBox
-    fig.text(0.200, 0.065, 'Min lift\n(s):', ha='left', va='center',
+    fig.text(0.010, 0.065, 'Min lift\n(s):', ha='left', va='center',
              fontsize=11, color='#cccccc', fontfamily='monospace')
-    ax_tb_lift = fig.add_axes([0.282, 0.040, 0.082, 0.048])
+    ax_tb_lift = fig.add_axes([0.095, 0.040, 0.082, 0.048])
     tb_lift = TextBox(ax_tb_lift, '', initial=str(default_min_lift), **tb_style)
     tb_lift.text_disp.set_color('#cccccc')
     tb_lift.text_disp.set_fontsize(13)
-
-    def on_thresh_submit(text):
-        try:
-            v = float(text)
-            if 0 < v <= 25:
-                threshold[0] = v
-                hline.set_ydata([v, v])
-                fig.canvas.draw_idle()
-                print(f"Threshold updated to {v:.1f} mm")
-        except ValueError:
-            pass
 
     def on_min_lift_submit(text):
         try:
@@ -332,12 +313,11 @@ def main():
         except ValueError:
             pass
 
-    tb_thresh.on_submit(on_thresh_submit)
     tb_lift.on_submit(on_min_lift_submit)
 
     # Start / Stop buttons
-    ax_start = fig.add_axes([0.39, 0.040, 0.155, 0.048])
-    ax_stop  = fig.add_axes([0.56, 0.040, 0.13,  0.048])
+    ax_start = fig.add_axes([0.22, 0.040, 0.155, 0.048])
+    ax_stop  = fig.add_axes([0.39, 0.040, 0.13,  0.048])
     btn_start = Button(ax_start, 'Start Recording', **btn_style)
     btn_stop  = Button(ax_stop,  'Stop Recording',  **btn_style)
     for btn in (btn_start, btn_stop):
@@ -399,7 +379,7 @@ def main():
             connected = _connected
             if not _times:
                 overlay_pos.set_visible(True); overlay_hz.set_visible(False)
-                return (line_blue, line_green, line_hz, hline, overlay_pos, overlay_hz,
+                return (line_blue, line_green, line_hz, overlay_pos, overlay_hz,
                         live_val_text, avg_val_text)
             ts = list(_times)
             ps = list(_pos)
@@ -430,9 +410,11 @@ def main():
         ts_win = ts[start:]
         ps_win = ps[start:]
 
-        ps_b, ps_g = _split_colors(ts_win, ps_win, threshold[0], min_lift_s[0])
-        line_blue.set_data(ts_win, ps_b)
-        line_green.set_data(ts_win, ps_g)
+        # colour using full history so lifts that started before the window edge
+        # are correctly classified (windowed-only runs look shorter than reality)
+        ps_b_all, ps_g_all = _split_colors(ts, ps, threshold[0], min_lift_s[0])
+        line_blue.set_data(ts_win, ps_b_all[start:])
+        line_green.set_data(ts_win, ps_g_all[start:])
         ax_pos.set_xlim(t_now - WINDOW_S, t_now)
 
         live_val_text.set_text(f'Live Linear Sensor Position: {ps[-1]:.2f} mm')
