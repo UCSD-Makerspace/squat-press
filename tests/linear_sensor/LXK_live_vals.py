@@ -1,9 +1,12 @@
+import sys
 import serial
 import time
 import threading
 from datetime import datetime
 from pathlib import Path
-import importlib.util
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from components.LinearSensor import interpolate
 
 
 def get_serial_port(default="ACM1"):
@@ -35,12 +38,6 @@ class LinearSensorReader:
         self._total_samples = 0
         self._total_errors = 0
 
-        # Load calibration table
-        cal_path = Path(__file__).resolve().parents[1] / "calibration" / "calibration_table.py"
-        spec = importlib.util.spec_from_file_location("calibration_table", cal_path)
-        cal_mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(cal_mod)
-        self.calibration_table = cal_mod.calibration_table
 
     def connect(self):
         try:
@@ -68,22 +65,7 @@ class LinearSensorReader:
             print("Disconnected")
 
     def interpolate(self, raw_value):
-        table = self.calibration_table
-
-        if raw_value >= table[0][1]:
-            return table[0][0]
-        if raw_value <= table[-1][1]:
-            return table[-1][0]
-
-        for i in range(len(table) - 1):
-            mm1, r1 = table[i]
-            mm2, r2 = table[i + 1]
-
-            if r2 <= raw_value <= r1:
-                ratio = (raw_value - r1) / (r2 - r1)
-                return mm1 + ratio * (mm2 - mm1)
-
-        return None
+        return interpolate(raw_value)
 
     # ── High-speed reader ─────────────────────────────────────────────
 

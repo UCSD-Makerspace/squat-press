@@ -11,6 +11,7 @@ Per-sample CSV: data/csv/YYYY.MM.DD/gpio_sensorN_HHMMSS.csv
 Peak is defined as any sample where position_mm >= PEAK_THRESHOLD_MM (19 mm).
 """
 
+import sys
 import serial
 import time
 import csv
@@ -26,26 +27,8 @@ SYNC_GPIO_PIN     = 21
 PEAK_THRESHOLD_MM = 19.0
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-CALIBRATION_TABLE = [
-    (0.000, 10615), (1.000, 10444), (2.000, 10284), (3.000, 10136),
-    (4.000,  9992), (5.000,  9826), (6.000,  9644), (7.000,  9556),
-    (8.000,  9463), (9.000,  9184),(10.000,  8982),(11.000,  8732),
-    (12.000, 8457),(13.000,  8289),(14.000,  8125),(15.000,  7959),
-    (16.000, 7789),(17.000,  7637),(18.000,  7447),(19.000,  7267),
-    (20.000, 7042),(21.000,  6865),(22.000,  6684),(23.000,  6471),
-    (24.000, 6254),(25.000,  6114),
-]
-
-def interpolate(raw):
-    t = CALIBRATION_TABLE
-    if raw >= t[0][1]:  return t[0][0]
-    if raw <= t[-1][1]: return t[-1][0]
-    for i in range(len(t) - 1):
-        mm1, r1 = t[i]; mm2, r2 = t[i+1]
-        if r2 <= raw <= r1:
-            return mm1 + (raw - r1) / (r2 - r1) * (mm2 - mm1)
-    return None
+sys.path.insert(0, str(_PROJECT_ROOT))
+from components.LinearSensor import interpolate
 
 # ── GPIO sync state ───────────────────────────────────────────────────────────
 

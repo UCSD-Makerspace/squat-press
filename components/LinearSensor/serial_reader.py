@@ -2,46 +2,35 @@ import serial
 import time
 from datetime import datetime
 
-class   LinearSensorReader:
+# Calibration run: 2026-06-04
+CALIBRATION_TABLE = [
+    (0.000, 10611), (1.000, 10462), (2.000, 10294), (3.000, 10118),
+    (4.000,  9987), (5.000,  9849), (6.000,  9652), (7.000,  9567),
+    (8.000,  9462), (9.000,  9216),(10.000,  8999),(11.000,  8744),
+    (12.000, 8475),(13.000,  8307),(14.000,  8126),(15.000,  7962),
+    (16.000, 7797),(17.000,  7648),(18.000,  7447),(19.000,  7295),
+    (20.000, 7070),(21.000,  6880),(22.000,  6710),(23.000,  6499),
+    (24.000, 6300),(25.000,  6146),
+]
+
+def interpolate(raw: int) -> float | None:
+    """Convert a raw ADC value to millimetres via linear interpolation."""
+    t = CALIBRATION_TABLE
+    if raw >= t[0][1]:  return t[0][0]
+    if raw <= t[-1][1]: return t[-1][0]
+    for i in range(len(t) - 1):
+        mm1, r1 = t[i]; mm2, r2 = t[i + 1]
+        if r2 <= raw <= r1:
+            return mm1 + (raw - r1) / (r2 - r1) * (mm2 - mm1)
+    return None
+
+
+class LinearSensorReader:
     def __init__(self, port, baudrate=115200):
-        self.port = port
+        self.port     = port
         self.baudrate = baudrate
-        self.ser = None
-        self.running = False
-
-        # Auto-generated calibration table
-        # Generated on: 2026-04-09 13:21:28
-        # Samples per point: 50
-
-        self.calibration_table = [
-            (0.000, 10664),
-            (1.000, 10495),
-            (2.000, 10377),
-            (3.000, 10214),
-            (4.000, 10050),
-            (5.000, 9903),
-            (6.000, 9718),
-            (7.000, 9602),
-            (8.000, 9511),
-            (9.000, 9331),
-            (10.000, 9065),
-            (11.000, 8813),
-            (12.000, 8524),
-            (13.000, 8329),
-            (14.000, 8216),
-            (15.000, 8030),
-            (16.000, 7840),
-            (17.000, 7734),
-            (18.000, 7524),
-            (19.000, 7332),
-            (20.000, 7155),
-            (21.000, 6959),
-            (22.000, 6760),
-            (23.000, 6498),
-            (24.000, 6353),
-            (25.000, 6167),
-        ]
-
+        self.ser      = None
+        self.running  = False
 
     def connect(self) -> bool:
         try:
@@ -57,53 +46,25 @@ class   LinearSensorReader:
             self.ser.close()
             print("Disconnected")
 
-    def send_command(self, command):
-        """Send a single character command"""
+    def send_command(self, command: str) -> str | None:
         if not self.ser or not self.ser.is_open:
             print("Not connected!")
             return None
-
         try:
             self.ser.write(command.encode('ascii'))
-            response = self.ser.readline().decode('ascii').strip()
-            return response
+            return self.ser.readline().decode('ascii').strip()
         except Exception as e:
             print(f"Command error: {e}")
             return None
 
-    def get_position(self):
+    def get_position(self) -> float | None:
         response = self.send_command('F')
-
         if response:
             try:
-                hex_part = response.split()[0]
-                decimal_value = int(hex_part, 16)
-                return self.interpolate(decimal_value)
+                return interpolate(int(response.split()[0], 16))
             except Exception as e:
-                print(f"Parse error in serial_reader get_position: {e}, raw response = {response}")
-                return None
+                print(f"Parse error: {e}, raw={response}")
         return None
 
-    def interpolate(self, raw_value) -> float:
-        """Interpolate raw sensor value to mm using calibration table"""
-        table = self.calibration_table
-
-        if raw_value >= table[0][1]:
-            return table[0][0]
-        if raw_value <= table[-1][1]:
-            return table[-1][0]
-
-        for i in range(len(table)-1):
-            mm1, r1 = table[i]
-            mm2, r2 = table[i+1]
-            if r2 <= raw_value <= r1:
-                ratio = (raw_value - r1) / (r2 - r1)
-                return mm1 + ratio * (mm2 - mm1)
-
-        return -1.0
-
-    def get_status(self):
-        return self.send_command('G')
-
-    def get_device_info(self):
-        return self.send_command('A')
+    def get_status(self)      -> str | None: return self.send_command('G')
+    def get_device_info(self) -> str | None: return self.send_command('A')

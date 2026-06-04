@@ -1,10 +1,11 @@
+import sys
 import serial
 import time
 from datetime import datetime
 from pathlib import Path
-import importlib.util
-from pathlib import Path
-import importlib.util
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from components.LinearSensor import interpolate
 
 class LinearSensorReader:
     def __init__(self, port, baudrate):
@@ -12,13 +13,6 @@ class LinearSensorReader:
         self.baudrate = baudrate
         self.ser = None
         self.running = False
-
-        # Load shared calibration table from tests/linear_sensor/calibration/calibration_table.py
-        cal_path = Path(__file__).resolve().parent / "calibration" / "calibration_table.py"
-        spec = importlib.util.spec_from_file_location("calibration_table", cal_path)
-        cal_mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(cal_mod)
-        self.calibration_table = cal_mod.calibration_table
 
     def connect(self):
         """Connect to the sensor"""
@@ -64,22 +58,7 @@ class LinearSensorReader:
         return None, response
 
     def interpolate(self, raw_value):
-        """Interpolate raw sensor value to mm using calibration table"""
-        table = self.calibration_table
-
-        if raw_value >= table[0][1]:
-            return table[0][0]
-        if raw_value <= table[-1][1]:
-            return table[-1][0]
-
-        for i in range(len(table)-1):
-            mm1, r1 = table[i]
-            mm2, r2 = table[i+1]
-            if r2 <= raw_value <= r1:
-                ratio = (raw_value - r1) / (r2 - r1)
-                return mm1 + ratio * (mm2 - mm1)
-
-        return None
+        return interpolate(raw_value)
 
     def get_status(self):
         """Get status using 'G' command"""

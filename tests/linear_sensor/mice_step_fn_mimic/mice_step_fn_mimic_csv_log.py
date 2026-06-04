@@ -17,11 +17,16 @@ This is intentionally simpler than the jitter test logger because we only need
 peak validation, not the full motion shape or an external GPIO sync pulse.
 """
 
+import sys
 import csv
 import serial
 import time
 from collections import deque
 from datetime import datetime
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from components.LinearSensor import interpolate
 
 BAUD_RATE = 115200
 SERIAL_TIMEOUT_S = 0.02
@@ -35,31 +40,6 @@ START_CONFIRM_SAMPLES = 2
 END_CONFIRM_SAMPLES = 5
 MIN_CYCLE_DURATION_S = 0.060
 MAX_IDLE_BUFFER_SAMPLES = 8
-
-CALIBRATION_TABLE = [
-    (0.000, 10615), (1.000, 10444), (2.000, 10284), (3.000, 10136),
-    (4.000,  9992), (5.000,  9826), (6.000,  9644), (7.000,  9556),
-    (8.000,  9463), (9.000,  9184), (10.000,  8982), (11.000,  8732),
-    (12.000, 8457), (13.000,  8289), (14.000,  8125), (15.000,  7959),
-    (16.000, 7789), (17.000,  7637), (18.000,  7447), (19.000,  7267),
-    (20.000, 7042), (21.000,  6865), (22.000,  6684), (23.000,  6471),
-    (24.000, 6254), (25.000,  6114),
-]
-
-
-def interpolate(raw):
-    table = CALIBRATION_TABLE
-    if raw >= table[0][1]:
-        return table[0][0]
-    if raw <= table[-1][1]:
-        return table[-1][0]
-    for i in range(len(table) - 1):
-        mm1, r1 = table[i]
-        mm2, r2 = table[i + 1]
-        if r2 <= raw <= r1:
-            return mm1 + (raw - r1) / (r2 - r1) * (mm2 - mm1)
-    return None
-
 
 def _resolve_port(port_text, default="ACM0"):
     if not port_text:
