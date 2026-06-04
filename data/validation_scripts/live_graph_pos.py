@@ -303,7 +303,7 @@ def main():
     tb_style  = dict(color='#1a1a1a', hovercolor='#222222')
 
     # Min lift TextBox
-    fig.text(0.010, 0.065, 'Min lift\n(s):', ha='left', va='center',
+    fig.text(0.010, 0.065, 'Min lift time above threshold\n(s):', ha='left', va='center',
              fontsize=11, color='#cccccc', fontfamily='monospace')
     ax_tb_lift = fig.add_axes([0.095, 0.040, 0.082, 0.048])
     tb_lift = TextBox(ax_tb_lift, '', initial=str(default_min_lift), **tb_style)
