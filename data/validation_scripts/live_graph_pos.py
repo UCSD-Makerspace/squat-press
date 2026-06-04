@@ -438,7 +438,7 @@ def main():
         return (line_blue, line_green, line_hz, overlay_pos, overlay_hz,
                 live_val_text, avg_val_text)
 
-    _ani = animation.FuncAnimation(fig, update, interval=50, blit=True)
+    _ani = animation.FuncAnimation(fig, update, interval=50, blit=False)
     plt.show()
 
 if __name__ == "__main__":
