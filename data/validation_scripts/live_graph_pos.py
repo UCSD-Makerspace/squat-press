@@ -239,7 +239,7 @@ def main():
 
     fig, (ax_pos, ax_hz) = plt.subplots(2, 1, figsize=(12, 7), sharex=False)
     fig.patch.set_facecolor('#0d0d0d')
-    fig.subplots_adjust(bottom=0.15, hspace=0.35)
+    fig.subplots_adjust(bottom=0.20, hspace=0.35)
     fig.canvas.manager.set_window_title('Live Sensor Position')
 
     for ax in (ax_pos, ax_hz):
@@ -286,9 +286,9 @@ def main():
                                transform=ax_pos.transAxes, **_ov_kw)
     overlay_hz  = ax_hz.text(0.5, 0.5, '', transform=ax_hz.transAxes, **_ov_kw)
 
-    rec_text   = fig.text(0.5, 0.075, '', ha='center', va='center',
+    rec_text   = fig.text(0.5, 0.115, '', ha='center', va='center',
                           fontsize=9, color='#888', fontfamily='monospace')
-    stats_text = fig.text(0.72, 0.042, '', ha='left', va='center',
+    stats_text = fig.text(0.72, 0.080, '', ha='left', va='center',
                           fontsize=8, color='#b0b0b0', fontfamily='monospace',
                           linespacing=1.6)
 
@@ -297,20 +297,20 @@ def main():
     tb_style  = dict(color='#1a1a1a', hovercolor='#222222')
 
     # Threshold TextBox
-    fig.text(0.010, 0.042, 'Threshold\n(mm):', ha='left', va='center',
-             fontsize=7.5, color='#888', fontfamily='monospace')
-    ax_tb_thresh = fig.add_axes([0.082, 0.028, 0.055, 0.032])
+    fig.text(0.010, 0.065, 'Threshold\n(mm):', ha='left', va='center',
+             fontsize=11, color='#cccccc', fontfamily='monospace')
+    ax_tb_thresh = fig.add_axes([0.105, 0.040, 0.082, 0.048])
     tb_thresh = TextBox(ax_tb_thresh, '', initial=str(default_threshold), **tb_style)
     tb_thresh.text_disp.set_color('#cccccc')
-    tb_thresh.text_disp.set_fontsize(9)
+    tb_thresh.text_disp.set_fontsize(13)
 
     # Min lift TextBox
-    fig.text(0.148, 0.042, 'Min lift\n(s):', ha='left', va='center',
-             fontsize=7.5, color='#888', fontfamily='monospace')
-    ax_tb_lift = fig.add_axes([0.208, 0.028, 0.055, 0.032])
+    fig.text(0.200, 0.065, 'Min lift\n(s):', ha='left', va='center',
+             fontsize=11, color='#cccccc', fontfamily='monospace')
+    ax_tb_lift = fig.add_axes([0.282, 0.040, 0.082, 0.048])
     tb_lift = TextBox(ax_tb_lift, '', initial=str(default_min_lift), **tb_style)
     tb_lift.text_disp.set_color('#cccccc')
-    tb_lift.text_disp.set_fontsize(9)
+    tb_lift.text_disp.set_fontsize(13)
 
     def on_thresh_submit(text):
         try:
@@ -336,8 +336,8 @@ def main():
     tb_lift.on_submit(on_min_lift_submit)
 
     # Start / Stop buttons
-    ax_start = fig.add_axes([0.29, 0.022, 0.155, 0.04])
-    ax_stop  = fig.add_axes([0.46, 0.022, 0.13,  0.04])
+    ax_start = fig.add_axes([0.39, 0.040, 0.155, 0.048])
+    ax_stop  = fig.add_axes([0.56, 0.040, 0.13,  0.048])
     btn_start = Button(ax_start, 'Start Recording', **btn_style)
     btn_stop  = Button(ax_stop,  'Stop Recording',  **btn_style)
     for btn in (btn_start, btn_stop):
@@ -374,7 +374,7 @@ def main():
         stats_text.set_text(
             f"Lifts detected:          {n_lifts}\n"
             f"Avg sampling rate:    {avg_hz} Hz\n"
-            f"Mean samples ≥ threshold: {mean_pk}"
+            f"Mean samples taken per valid lift above the threshold: {mean_pk}"
         )
         rec_text.set_text(f'{len(snapshot)} samples recorded — see file dialog')
         rec_text.set_color('#888')
