@@ -191,6 +191,17 @@ def main():
     ax_pos.set_title('Live Sensor Position', color='#ddd', pad=8)
     ax_pos.legend(fontsize=8, facecolor='#1a1a1a', labelcolor='#ccc', edgecolor='#333')
 
+    live_val_text = ax_pos.text(
+        0.02, 0.95, 'Live Linear Sensor Position: — mm',
+        transform=ax_pos.transAxes, fontsize=10, color='#4a9eff',
+        va='top', fontfamily='monospace',
+    )
+    avg_val_text = ax_pos.text(
+        0.02, 0.83, 'Last 0.1 sec average: — mm',
+        transform=ax_pos.transAxes, fontsize=9, color='#aaaaaa',
+        va='top', fontfamily='monospace',
+    )
+
     # hz subplot
     (line_hz,) = ax_hz.plot([], [], color='#a78bfa', linewidth=1.2)
     ax_hz.set_xlim(0, WINDOW_S)
@@ -303,7 +314,9 @@ def main():
         overlay_hz.set_visible(False)   # only clutter position plot with message
 
         if not connected:
-            return (line_pos, line_hz, overlay_pos, overlay_hz)
+            live_val_text.set_text('Live Linear Sensor Position: — mm')
+            avg_val_text.set_text('Last 0.1 sec average: — mm')
+            return (line_pos, line_hz, overlay_pos, overlay_hz, live_val_text, avg_val_text)
 
         t_now  = ts[-1]
         cutoff = t_now - WINDOW_S
@@ -317,6 +330,14 @@ def main():
         line_pos.set_data(ts[start:], ps[start:])
         ax_pos.set_xlim(t_now - WINDOW_S, t_now)
 
+        # live value: most recent sample
+        live_val_text.set_text(f'Live Linear Sensor Position: {ps[-1]:.2f} mm')
+
+        # 0.1 sec rolling average
+        avg_samples = [ps[i] for i, t in enumerate(ts) if t >= t_now - 0.1]
+        if avg_samples:
+            avg_val_text.set_text(f'Last 0.1 sec average: {sum(avg_samples)/len(avg_samples):.2f} mm')
+
         N = HZ_SMOOTH_N
         if len(ts) > N:
             hz_ts   = ts[N:]
@@ -329,7 +350,7 @@ def main():
             line_hz.set_data(hz_ts[hz_start:], hz_vals[hz_start:])
         ax_hz.set_xlim(t_now - WINDOW_S, t_now)
 
-        return (line_pos, line_hz, overlay_pos, overlay_hz)
+        return (line_pos, line_hz, overlay_pos, overlay_hz, live_val_text, avg_val_text)
 
     _ani = animation.FuncAnimation(fig, update, interval=50, blit=True)
     plt.show()
