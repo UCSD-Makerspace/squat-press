@@ -399,7 +399,7 @@ def main():
             connected = _connected
             if not _times:
                 overlay_pos.set_visible(True); overlay_hz.set_visible(False)
-                return (line_blue, line_green, line_hz, overlay_pos, overlay_hz,
+                return (line_blue, line_green, line_hz, hline, overlay_pos, overlay_hz,
                         live_val_text, avg_val_text)
             ts = list(_times)
             ps = list(_pos)
