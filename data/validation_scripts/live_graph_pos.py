@@ -7,8 +7,11 @@ Shows the last WINDOW_S seconds of position data in real time.
 Hot-swap: unplug the sensor at any time — the graph shows a "no sensor"
 overlay and automatically reconnects when it's plugged back in.
 
-Start/Stop buttons (or S / E keys) toggle CSV recording independently
-of the live graph. On Stop a file-save dialog opens.
+Start/Stop buttons (or S / E keys) toggle CSV recording. On Stop a
+file-save dialog opens and session stats are shown in the UI.
+
+The "Min lift (s)" text box (bottom-left) sets the minimum time the
+sensor must stay above 19 mm for a crossing to count as a valid lift.
 
 Usage:
     python live_graph_pos.py              # auto-detect or prompt for port
@@ -22,23 +25,22 @@ import time
 import threading
 from collections import deque
 from datetime import datetime
-
-import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import serial
 import serial.tools.list_ports
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from matplotlib.widgets import Button
+from matplotlib.widgets import Button, TextBox
 from components.LinearSensor import interpolate
 
 BAUD_RATE   = 115200
-WINDOW_S    = 10.0   # seconds of history shown in the scrolling plot
-PEAK_MM     = 19.0   # horizontal reference line
-MAX_PTS     = 6000   # ring buffer (~30 s at 200 Hz)
-HZ_SMOOTH_N = 30     # rolling window size for Hz estimate (samples)
+WINDOW_S    = 10.0    # seconds of history shown in the scrolling plot
+PEAK_MM     = 19.0    # detection threshold / line colour boundary
+MAX_PTS     = 6000    # ring buffer (~30 s at 200 Hz)
+HZ_SMOOTH_N = 30      # rolling window size for Hz estimate (samples)
 
 # ── Shared sensor state ───────────────────────────────────────────────────────
 
@@ -46,7 +48,7 @@ _lock      = threading.Lock()
 _times     = deque(maxlen=MAX_PTS)
 _pos       = deque(maxlen=MAX_PTS)
 _raw       = deque(maxlen=MAX_PTS)
-_connected = False    # True when sensor is actively streaming data
+_connected = False
 
 # ── Recording state ───────────────────────────────────────────────────────────
 
@@ -64,10 +66,8 @@ def _reader(initial_port):
     t0   = time.perf_counter()
 
     while True:
-        # ── Connect / reconnect ───────────────────────────────────────────────
         if ser is None:
             candidates = [p.device for p in serial.tools.list_ports.comports()]
-            # prefer the original port, then try anything available
             ordered = ([port] if port in candidates else []) + \
                       [p for p in candidates if p != port]
             for candidate in ordered:
@@ -86,7 +86,6 @@ def _reader(initial_port):
                 time.sleep(0.5)
                 continue
 
-        # ── Read sample ───────────────────────────────────────────────────────
         try:
             ser.write(b'F')
             resp = ser.readline().decode('ascii', errors='replace').strip()
@@ -135,6 +134,41 @@ def _pick_port():
     idx = int(input("Select port number: ").strip())
     return ports[idx]
 
+# ── Session stats ─────────────────────────────────────────────────────────────
+
+def _session_stats(buffer, min_lift_s):
+    """Return (n_lifts, avg_hz, mean_peak_samples_per_lift) from a recorded buffer."""
+    if len(buffer) < 2:
+        return 0, 0.0, 0.0
+
+    duration = buffer[-1][0] - buffer[0][0]
+    avg_hz   = len(buffer) / duration if duration > 0 else 0.0
+
+    lifts, peak_counts = 0, []
+    in_lift = False
+    lift_start_t = lift_above_n = 0
+
+    for t, mm, _ in buffer:
+        if mm >= PEAK_MM:
+            if not in_lift:
+                in_lift      = True
+                lift_start_t = t
+                lift_above_n = 1
+            else:
+                lift_above_n += 1
+        elif in_lift:
+            if (t - lift_start_t) >= min_lift_s:
+                lifts += 1
+                peak_counts.append(lift_above_n)
+            in_lift = False
+
+    if in_lift and (buffer[-1][0] - lift_start_t) >= min_lift_s:
+        lifts += 1
+        peak_counts.append(lift_above_n)
+
+    mean_peak = sum(peak_counts) / len(peak_counts) if peak_counts else 0.0
+    return lifts, round(avg_hz, 1), round(mean_peak, 1)
+
 # ── CSV save ──────────────────────────────────────────────────────────────────
 
 def _save_csv(buffer):
@@ -166,12 +200,17 @@ def main():
     global _recording, _rec_buffer, _rec_t0
 
     port = _pick_port()
+    default_min_lift = float(
+        input("Minimum time above 19 mm for a valid lift (s) [0.040]: ").strip() or 0.040
+    )
+    min_lift_s = [default_min_lift]   # list so closures can mutate it
+
     print(f"Starting sensor reader (port hint: {port}) ...")
     threading.Thread(target=_reader, args=(port,), daemon=True).start()
 
-    fig, (ax_pos, ax_hz) = plt.subplots(2, 1, figsize=(11, 7), sharex=False)
+    fig, (ax_pos, ax_hz) = plt.subplots(2, 1, figsize=(12, 7), sharex=False)
     fig.patch.set_facecolor('#0d0d0d')
-    fig.subplots_adjust(bottom=0.13, hspace=0.35)
+    fig.subplots_adjust(bottom=0.14, hspace=0.35)
     fig.canvas.manager.set_window_title('Live Sensor Position')
 
     for ax in (ax_pos, ax_hz):
@@ -181,8 +220,9 @@ def main():
             spine.set_edgecolor('#333')
         ax.grid(True, alpha=0.15, color='#555')
 
-    # position subplot
-    (line_pos,) = ax_pos.plot([], [], color='#4a9eff', linewidth=1.5)
+    # position subplot — two lines, blue below threshold, green above
+    (line_blue,)  = ax_pos.plot([], [], color='#4a9eff', linewidth=1.5)
+    (line_green,) = ax_pos.plot([], [], color='#4ade80', linewidth=1.5)
     ax_pos.axhline(PEAK_MM, color='#ff6b6b', linestyle='--', linewidth=1.0,
                    label=f'{PEAK_MM:.0f} mm detection threshold')
     ax_pos.set_xlim(0, WINDOW_S)
@@ -210,31 +250,46 @@ def main():
     ax_hz.set_ylabel('Sampling rate (Hz)', color='#aaa')
     ax_hz.set_title('Live Sampling Frequency', color='#ddd', pad=8)
 
-    # disconnection overlay (one per subplot, hidden by default)
-    _overlay_kw = dict(
-        transform=None, ha='center', va='center', fontsize=11,
-        color='#ff6b6b', visible=False,
-        bbox=dict(boxstyle='round,pad=0.6', facecolor='#111111',
-                  edgecolor='#444', alpha=0.92),
-    )
-    overlay_pos = ax_pos.text(
-        0.5, 0.5, 'No linear sensor detected\nPlease plug in the USB',
-        transform=ax_pos.transAxes, **{k: v for k, v in _overlay_kw.items() if k != 'transform'},
-    )
-    overlay_hz = ax_hz.text(
-        0.5, 0.5, '',
-        transform=ax_hz.transAxes, **{k: v for k, v in _overlay_kw.items() if k != 'transform'},
-    )
+    # disconnection overlay
+    _ov_kw = dict(ha='center', va='center', fontsize=11, color='#ff6b6b', visible=False,
+                  bbox=dict(boxstyle='round,pad=0.6', facecolor='#111111', edgecolor='#444', alpha=0.92))
+    overlay_pos = ax_pos.text(0.5, 0.5, 'No linear sensor detected\nPlease plug in the USB',
+                               transform=ax_pos.transAxes, **_ov_kw)
+    overlay_hz  = ax_hz.text(0.5, 0.5, '', transform=ax_hz.transAxes, **_ov_kw)
 
-    # recording status text
-    rec_text = fig.text(0.5, 0.055, '', ha='center', va='center',
+    # recording status text (centre bottom)
+    rec_text = fig.text(0.5, 0.065, '', ha='center', va='center',
                         fontsize=9, color='#888', fontfamily='monospace')
 
-    # ── Buttons ───────────────────────────────────────────────────────────────
+    # session stats text (right of stop button, shown after each recording)
+    stats_text = fig.text(0.72, 0.042, '', ha='left', va='center',
+                          fontsize=8, color='#b0b0b0', fontfamily='monospace',
+                          linespacing=1.6)
+
+    # ── Bottom controls ───────────────────────────────────────────────────────
     btn_style = dict(color='#1e1e1e', hovercolor='#2a2a2a')
 
-    ax_start = fig.add_axes([0.32, 0.02, 0.16, 0.04])
-    ax_stop  = fig.add_axes([0.54, 0.02, 0.14, 0.04])
+    # min-lift TextBox (label drawn separately so we control its position)
+    fig.text(0.015, 0.042, 'Min lift\ntime (s):', ha='left', va='center',
+             fontsize=7.5, color='#888', fontfamily='monospace')
+    ax_tb   = fig.add_axes([0.085, 0.025, 0.075, 0.035])
+    tb_lift = TextBox(ax_tb, '', initial=str(default_min_lift),
+                      color='#1a1a1a', hovercolor='#222222')
+    tb_lift.text_disp.set_color('#cccccc')
+    tb_lift.text_disp.set_fontsize(9)
+
+    def on_min_lift_submit(text):
+        try:
+            v = float(text)
+            if v > 0:
+                min_lift_s[0] = v
+                print(f"Min lift time updated to {v:.3f} s")
+        except ValueError:
+            pass
+    tb_lift.on_submit(on_min_lift_submit)
+
+    ax_start = fig.add_axes([0.19, 0.02, 0.16, 0.04])
+    ax_stop  = fig.add_axes([0.41, 0.02, 0.14, 0.04])
     btn_start = Button(ax_start, 'Start Recording', **btn_style)
     btn_stop  = Button(ax_stop,  'Stop Recording',  **btn_style)
 
@@ -250,6 +305,7 @@ def main():
             _rec_buffer = []
             _rec_t0     = time.perf_counter()
             _recording  = True
+        stats_text.set_text('')
         btn_start.label.set_text('Recording in progress…')
         btn_start.label.set_color('#555555')
         btn_start.color      = '#161616'
@@ -267,21 +323,29 @@ def main():
                 return
             _recording = False
             snapshot   = list(_rec_buffer)
+
         btn_start.label.set_text('Start Recording')
         btn_start.label.set_color('#cccccc')
         btn_start.color      = '#1e1e1e'
         btn_start.hovercolor = '#2a2a2a'
         ax_start.set_facecolor('#1e1e1e')
-        fig.canvas.draw_idle()
-        rec_text.set_text(f'Saved {len(snapshot)} samples — see file dialog')
+
+        n_lifts, avg_hz, mean_peak_n = _session_stats(snapshot, min_lift_s[0])
+        stats_text.set_text(
+            f"Lifts detected:          {n_lifts}\n"
+            f"Avg sampling rate:    {avg_hz} Hz\n"
+            f"Mean samples ≥19 mm: {mean_peak_n}"
+        )
+        rec_text.set_text(f'{len(snapshot)} samples recorded — see file dialog')
         rec_text.set_color('#888')
+        fig.canvas.draw_idle()
+
         print(f"Recording stopped ({len(snapshot)} samples). Opening save dialog…")
         threading.Thread(target=_save_csv, args=(snapshot,), daemon=True).start()
 
     btn_start.on_clicked(lambda _e: _do_start())
     btn_stop.on_clicked( lambda _e: _do_stop())
 
-    # keyboard shortcuts: S = start, E = end/stop
     def on_key(event):
         if event.key == 's':
             _do_start()
@@ -291,7 +355,8 @@ def main():
 
     # ── Animation ─────────────────────────────────────────────────────────────
 
-    _prev_connected = [True]   # track transitions to avoid redundant redraws
+    _prev_connected = [True]
+    _nan = float('nan')
 
     def update(_frame):
         with _lock:
@@ -299,11 +364,11 @@ def main():
             if not _times:
                 overlay_pos.set_visible(True)
                 overlay_hz.set_visible(False)
-                return (line_pos, line_hz, overlay_pos, overlay_hz)
+                return (line_blue, line_green, line_hz, overlay_pos, overlay_hz,
+                        live_val_text, avg_val_text)
             ts = list(_times)
             ps = list(_pos)
 
-        # show/hide overlay on connection-state change
         if connected != _prev_connected[0]:
             _prev_connected[0] = connected
             fig.canvas.manager.set_window_title(
@@ -311,12 +376,13 @@ def main():
             )
 
         overlay_pos.set_visible(not connected)
-        overlay_hz.set_visible(False)   # only clutter position plot with message
+        overlay_hz.set_visible(False)
 
         if not connected:
             live_val_text.set_text('Live Linear Sensor Position: — mm')
             avg_val_text.set_text('Last 0.1 sec average: — mm')
-            return (line_pos, line_hz, overlay_pos, overlay_hz, live_val_text, avg_val_text)
+            return (line_blue, line_green, line_hz, overlay_pos, overlay_hz,
+                    live_val_text, avg_val_text)
 
         t_now  = ts[-1]
         cutoff = t_now - WINDOW_S
@@ -327,16 +393,22 @@ def main():
                 start = i
                 break
 
-        line_pos.set_data(ts[start:], ps[start:])
+        ts_win = ts[start:]
+        ps_win = ps[start:]
+
+        # two-colour line: blue below PEAK_MM, green at/above
+        ps_blue  = [p if p <  PEAK_MM else _nan for p in ps_win]
+        ps_green = [p if p >= PEAK_MM else _nan for p in ps_win]
+        line_blue.set_data(ts_win, ps_blue)
+        line_green.set_data(ts_win, ps_green)
         ax_pos.set_xlim(t_now - WINDOW_S, t_now)
 
-        # live value: most recent sample
         live_val_text.set_text(f'Live Linear Sensor Position: {ps[-1]:.2f} mm')
-
-        # 0.1 sec rolling average
-        avg_samples = [ps[i] for i, t in enumerate(ts) if t >= t_now - 0.1]
-        if avg_samples:
-            avg_val_text.set_text(f'Last 0.1 sec average: {sum(avg_samples)/len(avg_samples):.2f} mm')
+        avg_samp = [ps[i] for i, t in enumerate(ts) if t >= t_now - 0.1]
+        if avg_samp:
+            avg_val_text.set_text(
+                f'Last 0.1 sec average: {sum(avg_samp)/len(avg_samp):.2f} mm'
+            )
 
         N = HZ_SMOOTH_N
         if len(ts) > N:
@@ -350,7 +422,8 @@ def main():
             line_hz.set_data(hz_ts[hz_start:], hz_vals[hz_start:])
         ax_hz.set_xlim(t_now - WINDOW_S, t_now)
 
-        return (line_pos, line_hz, overlay_pos, overlay_hz, live_val_text, avg_val_text)
+        return (line_blue, line_green, line_hz, overlay_pos, overlay_hz,
+                live_val_text, avg_val_text)
 
     _ani = animation.FuncAnimation(fig, update, interval=50, blit=True)
     plt.show()
