@@ -75,80 +75,9 @@ squat-press/
 
 ## Peristaltic Pump Reward (Liquid Dosing)
 
-An alternative reward path: a **Kamoer stepper peristaltic pump** dispenses a precise liquid (water) reward, controlled over **Modbus RTU (RS-485)**. Intended for water-restricted mouse protocols where lift height triggers a metered dose.
+Optional liquid-reward path: a **Kamoer stepper peristaltic pump** dispenses a metered water dose over **Modbus RTU (RS-485)** — one single-step trigger ≈ one **~44 µL** dose.
 
-### Hardware
-
-| Component | Part | Notes |
-|---|---|---|
-| Pump | Kamoer KPMP10 (KPM10-ST-A2), 24 V stepper | Low flow 0–5.9 mL/min; 4-roller head |
-| Driver | Kamoer MODBUS-RTU driver (order 10.10.0013) | Max 32 microsteps; current 0.7–4.0 A |
-| USB↔RS-485 | Gearmo GM-482422 (FTDI) | PC: `COM8` · Pi: `/dev/ttyUSB*` |
-| Supply | 24 V DC bench supply | ~1–2 A |
-
-### Wiring
-
-| Driver | Connects to |
-|---|---|
-| RS-485 **`B G A`** 3-pin port | Gearmo pin1→A, pin2→B, pin5→G (swap 1↔2 if silent) |
-| Motor `A+ A- B+ B-` | Pump motor coils (short two wires + spin head to find a coil pair) |
-| `V+ V-` | 24 V supply |
-
-> ⚠️ The 3-pin `B G A` connector is RS-485; the 6-pin `B- B+ A- A+ V- V+` block is **motor + power** — do not confuse them.
-
-### DIP switches (RS-485 mode)
-
-| Switches | Setting |
-|---|---|
-| SW1–SW5 | OFF |
-| SW6 | ON (enables RS-485 / Modbus) |
-| SW7–SW9 | Subdivision — OFF/OFF/OFF = **32** |
-| SW10–SW12 | Drive current — ON/OFF/ON = **1 A** |
-
-Board reads DIPs only at power-up → power-cycle after changes. **In RS-485 mode the subdivision register (0x0001) must match the SW7–9 setting**, or single-step rotations come out scaled wrong.
-
-### Comms
-
-`9600 8N1`, no parity, device address `1`. Big-endian data; 32-bit params = 2 registers, low word first. Pace every frame ≥ 70 ms (driver needs ≥ 35 ms; comms is flaky while the motor spins).
-
-### Dosing configuration (saved to flash 2026-07-08)
-
-| Register | Value | Meaning |
-|---|---|---|
-| Subdivision `0x0001` | 32 | matches DIP |
-| Step angle `0x0000` | 180 | 1.8° |
-| Start freq `0x0002` | 50 Hz | gentle launch (anti-jerk) |
-| Accel/decel `0x0003` | 300 Hz | smooth ramp |
-| Pitch `0x0004-5` | 100 | circle units per revolution |
-| Stop mode `0x0007` | 0 | slow ramp stop (quiet) |
-| Speed `0x0008` | 30 rpm | set at run time |
-| Circles `0x0009-A` | 75 | **0.75 rev per dose** |
-| Direction `0x000B` | 0 | forward |
-
-**One dose = one single-step trigger.** `revolutions = circles ÷ pitch = 75 ÷ 100 = 0.75 rev`.
-
-### Control primitives (coils, `0xFF00` = ON)
-
-| Coil | Action |
-|---|---|
-| `0x0004` | Forward (level: ON runs continuously, OFF stops) |
-| `0x0005` | Reverse |
-| `0x0007` | **Single-step** — MOMENTARY trigger; pulse ON→OFF to run exactly `circles/pitch` rev once |
-| `0x0000` | Save all parameters to flash |
-
-**Confirmed stop:** write coils `0x0004`/`0x0005`/`0x0007` OFF and speed `0x0008` = 0, then read status `0x0030` until it reads 0 (retry, paced).
-
-### Dose target (from literature)
-
-Head-fixed mouse reward ≈ 8 µL/trial (range 4–10); water-restricted daily total ≥ 1.0 mL, target ~1.2 mL/day, hold ~80 % baseline weight. This rig: 150 lifts/day at 5–6 lifts per dose → ~27 doses/day → **~44 µL/dose** (≈ 8 µL/lift). The saved 0.75 rev is the nominal dose; **run a gravimetric calibration (weigh ~20 doses, 1 mg = 1 µL) to convert 0.75 rev → exact µL and fine-tune `circles`.**
-
-### Tubing
-
-The KPMP10 head takes **1.52 mm ID × 3.22 mm OD (~0.85 mm wall)** = std **1/16" ID × 1/8" OD**. Selected tube: **PharMed BPT 1/16"×1/8"** (biocompatible, USP Class VI, long flex life). It is a marginal dimensional match (slightly thinner wall) — verify no free-siphon at rest (use an anti-siphon loop) and re-calibrate µL/rev after any tube change.
-
-### Calibration GUI
-
-`pump_calibrator_gui.py` (Tkinter) exposes every driver register/coil, a dose helper (µL ↔ revolutions), timed-dose and single-step controls, and a paced confirmed-stop. Connect at `COM8 / 9600 / addr 1` on the PC, or set the port to `/dev/ttyUSB*` on the Pi. *(Currently maintained outside the repo — to be added under `components/PeristalticPump/`.)*
+Full documentation lives in the wiki, structured with the **Karpathy LLM-wiki method** (a compiled page derived from immutable sources): **[`wiki/peristaltic-pump.md`](wiki/peristaltic-pump.md)** — hardware, DIP/register config, dosing math, tubing, and the calibration GUI.
 
 ---
 
