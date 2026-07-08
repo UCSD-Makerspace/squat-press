@@ -62,5 +62,6 @@ and re-calibrate after any tube change.
 ## Calibration GUI
 `pump_calibrator_gui.py` (Tkinter): exposes every register/coil, a dose helper
 (µL ↔ revolutions), single-step + timed-dose, and a paced confirmed-stop.
-Connect at `COM8 / 9600 / addr 1` (PC) or set port `/dev/ttyUSB*` (Pi).
-*(To be added to the repo under `components/PeristalticPump/`.)*
+Port auto-defaults to `COM8` (Windows) / `/dev/ttyUSB0` (Pi). In-repo at
+[`components/PeristalticPump/`](../components/PeristalticPump/) (also `pump_diag.py`,
+a read-only register dump).
