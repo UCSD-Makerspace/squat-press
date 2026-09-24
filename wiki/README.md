@@ -17,4 +17,5 @@ markdown fed to a long-context model.
 
 | Compiled page | Compiled from |
 |---|---|
+| [topology.md](topology.md) — system power, boot & device map | [rig-power-and-boot](sources/rig-power-and-boot.md) |
 | [peristaltic-pump.md](peristaltic-pump.md) — liquid-reward dosing subsystem | [kamoer-modbus-driver](sources/kamoer-modbus-driver.md), [kamoer-pump-tubing](sources/kamoer-pump-tubing.md), [mouse-reward-dosing](sources/mouse-reward-dosing.md) |

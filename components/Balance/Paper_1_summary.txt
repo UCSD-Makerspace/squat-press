@@ -1,0 +1,13 @@
+=== Paper_1 session - 8.17 h, 183787 readings ===
+doses detected: 100   (clean 5-40 mg: 100)   down-events: 1
+clean dose: mean 14.50 mg = 14.08 uL   SD 1.02   CV 7.1%   range 12.2-16.4 mg
+total delivered (clean): 1450.4 mg = 1.408 mL of mix
+--- per-hour (clean doses):
+  h1: n=12  mean 14.33 mg = 13.92 uL  CV 9%
+  h2: n=13  mean 14.73 mg = 14.30 uL  CV 7%
+  h3: n=12  mean 14.53 mg = 14.11 uL  CV 7%
+  h4: n=13  mean 14.62 mg = 14.19 uL  CV 7%
+  h5: n=12  mean 14.48 mg = 14.06 uL  CV 7%
+  h6: n=13  mean 14.47 mg = 14.05 uL  CV 7%
+  h7: n=12  mean 14.46 mg = 14.04 uL  CV 7%
+  h8: n=13  mean 14.39 mg = 13.97 uL  CV 7%
