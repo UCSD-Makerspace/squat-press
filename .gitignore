@@ -8,6 +8,11 @@ electrical/
 compare_out/
 paper/
 
+# Claude Code / AI-assistant local files
+.claude/
+CLAUDE.local.md
+.mcp.json
+
 # C extensions
 *.so
 
