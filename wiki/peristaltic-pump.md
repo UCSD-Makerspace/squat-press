@@ -1,67 +1,72 @@
 # Peristaltic Pump Reward (Liquid Dosing)
 
 > **Compiled page.** Synthesised from
-> [`sources/kamoer-modbus-driver.md`](sources/kamoer-modbus-driver.md),
-> [`sources/kamoer-pump-tubing.md`](sources/kamoer-pump-tubing.md),
-> [`sources/mouse-reward-dosing.md`](sources/mouse-reward-dosing.md).
-> Regenerate if any source changes.
+> [`sources/mother-controller/pump-subsystem.md`](sources/mother-controller/pump-subsystem.md),
+> [`sources/mouse-reward-dosing.md`](sources/mouse-reward-dosing.md),
+> [`sources/kamoer-pump-tubing.md`](sources/kamoer-pump-tubing.md).
+> Regenerate if any source changes. **Related:** [mother-controller](mother-controller.md).
 
-A Kamoer stepper peristaltic pump dispenses a precise water reward over Modbus
-RTU (RS-485). One **single-step trigger = one metered dose**.
+The current reward pump is a **Raspberry Pi Pico (RP2040) + TMC2209 SilentStepStick** driving an
+**ST42 2-channel 12-roller** peristaltic head off a **24 V** motor rail. The sensor confirms a
+qualifying lift; the host commands the pump Pico to deliver one metered dose.
 
-## Hardware & wiring
+> **Historical:** an earlier build used a **Kamoer stepper pump over Modbus/RS-485**. That design is
+> **superseded** and its driver code was removed in the fall-2026 cleanup (recoverable from the
+> `pre-cleanup` git tag). Its notes are retained as immutable sources
+> ([kamoer-modbus-driver](sources/kamoer-modbus-driver.md),
+> [kamoer-pump-tubing](sources/kamoer-pump-tubing.md)) for the tubing/dosing facts that still apply.
+
+## Hardware & drive chain
+
+`RP2040 → TMC2209 SilentStepStick (Watterott, 0.11 Ω sense) → ST42 12-roller head`, 24 V rail.
 
 | Part | Notes |
 |---|---|
-| Kamoer KPMP10 (KPM10-ST-A2) pump | 24 V stepper, 0–5.9 mL/min, 4-roller head |
-| Kamoer MODBUS-RTU driver (10.10.0013) | max 32 microsteps; current DIP-set |
-| Gearmo GM-482422 USB↔RS-485 | PC `COM8`, Pi `/dev/ttyUSB*` |
-| 24 V bench supply | ~1–2 A |
+| MCU | RP2040 / Pico, runs `pump.py` on flash, commanded over the USB REPL |
+| Driver | TMC2209 SilentStepStick (Watterott, **0.11 Ω** sense resistors) |
+| Motor / head | ST42 2-channel 12-roller, 200 steps/rev, rated 1.2 A/phase |
+| Motor rail | **24 V** (TMC2209 VM abs-max ~29 V; VMOT bulk cap ≥ 50 V rated) |
+| Tube | 0.51 × 2.31 mm (~0.9 mm wall) — **wall thickness, not ID, governs occlusion / anti-siphon** |
 
-- RS-485 **`B G A`** 3-pin port: Gearmo pin1→A, pin2→B, pin5→G (swap 1↔2 if silent).
-- Motor `A+ A- B+ B-`; power `V+ V-`. The 6-pin block is motor+power, **not** comms.
+## Pin map (rev3 board)
 
-## DIP (RS-485 mode)
-SW1–5 OFF · SW6 ON · SW7-9 = OFF/OFF/OFF (**subdivision 32**) · SW10-12 = ON/OFF/ON (**1 A**).
-Power-cycle after any DIP change. **The subdivision register must match SW7-9.**
+| Signal | RP2040 pin | Notes |
+|---|---|---|
+| STEP | **GP17** | PIO step train |
+| DIR | **GP16** | direction |
+| EN | **GP26** | active-low; boots HIGH = disabled (safe); de-energizes between doses |
+| MS1 / MS2 | **GP22 / GP21** | both LOW = 1/8 microstep = **1600 steps/rev** |
+| UART (PDN_UART) | **GP19** | single-wire TMC2209 UART, 115200 |
+| (isolated PDN pad) | **GP18** | **Hi-Z, never drive** (driving it clamps the shared UART bus) |
 
-## Comms
-`9600 8N1`, addr `1`. 32-bit params = 2 registers low-word-first. Pace frames
-≥ 70 ms and retry per-op (comms is flaky while the motor spins).
+## Motor current
 
-## Saved dosing config (flash, 2026-07-08)
-| Register | Value |
-|---|---|
-| Subdivision `0x0001` | 32 |
-| Step angle `0x0000` | 180 |
-| Start freq `0x0002` | 50 Hz (anti-jerk) |
-| Accel/decel `0x0003` | 300 Hz |
-| Pitch `0x0004-5` | 100 |
-| Stop mode `0x0007` | 0 (slow) |
-| Speed `0x0008` | 30 rpm (set at run time) |
-| Circles `0x0009-0A` | 75 → **0.75 rev/dose** |
-| Direction `0x000B` | 0 (fwd) |
+`I_RMS = 0.708 × VREF` (0.11 Ω board). Bench setting **VREF ≈ 1.17 V → 0.83 A RMS** (headroom below
+the ST42's 1.2 A rating). **Do not** reuse the old HR4988 `I = VREF/0.8` (0.1 Ω) formula — different driver.
 
-`revolutions = circles ÷ pitch = 75 ÷ 100 = 0.75 rev`.
+## Firmware (`pump.py`) — non-obvious rules
 
-## Dosing one reward
-1. Ensure enabled (`0x004F`=0), set speed (`0x0008`, non-zero), set circles (`0x0009-0A`).
-2. **Pulse** coil `0x0007` ON→OFF → runs exactly `circles/pitch` rev once, self-stops.
-3. Confirmed stop (safety): coils `0x0004/0x0005/0x0007` OFF + speed 0, then read `0x0030` until 0.
+- Step train on **PIO0/SM0**; TMC2209 config over single-wire UART on **PIO1**.
+- **The UART must be TRANSIENT** — a *persistent* UART on PIO1 silently stops the PIO0 step train.
+  `pump.py` brings the UART up only to configure (StealthChop2, 256-µstep interp, current regs) and to
+  soft-off, then tears it down before stepping.
+- **Silent soft-off** ramps `IHOLD_IRUN` down before `disable()` → kills the end-of-dose "click."
+- **PIO memory leak:** `rp2.PIO(n).remove_program()` before building each StateMachine (a soft reboot
+  does not clear PIO), or the SM wedges after a few restarts.
+- `dose_ul()` → revolutions, so **dose mass ∝ 1 / `uL_per_rev`**. Not autonomous — waits for host commands.
 
-## Dose target
-~44 µL/dose ≈ 8 µL/lift (150 lifts/day, 5–6 lifts/dose, ~1.2 mL/day). Saved
-0.75 rev is the nominal dose. **Calibrate gravimetrically** (weigh ~20 doses,
-1 mg = 1 µL) to convert 0.75 rev → exact µL, then fine-tune `circles`.
+## Dose calibration (gravimetric, via the Mettler balance)
 
-## Tubing
-Head takes 1.52 × 3.22 mm (= 1/16"×1/8"). In use: **PharMed BPT 1/16"×1/8"**
-(USP Class VI). Marginal fit → verify no free-siphon at rest (anti-siphon loop)
-and re-calibrate after any tube change.
+- Current config: **`uL_per_rev = 12.60`, `dose_uL = 15.0`** → 1.19 rev/dose.
+- Measured (216 s cadence): ~16.4 mg/dose, CV 1.2 % (running ~1.4 mg high). **To center on 15 mg:
+  raise `uL_per_rev` 12.60 → ~13.82.**
+- **Dose consistency is cadence- and tubing-dependent:** at 90 s cadence the same config gave CV 20.7 %
+  with a ~7-dose beat (tube doesn't fully refill between fast doses); volume is conserved over ~7 doses.
+  **Calibrate at the study's actual cadence, and keep the outlet tube rigidly fixed.** The first ~9 doses
+  after priming are erratic (air) — prime out before counting.
 
-## Calibration GUI
-`pump_calibrator_gui.py` (Tkinter): exposes every register/coil, a dose helper
-(µL ↔ revolutions), single-step + timed-dose, and a paced confirmed-stop.
-Port auto-defaults to `COM8` (Windows) / `/dev/ttyUSB0` (Pi). In-repo at
-[`components/PeristalticPump/`](../components/PeristalticPump/) (also `pump_diag.py`,
-a read-only register dump).
+## Code
+
+In-repo at [`components/PeristalticPump/`](../components/PeristalticPump/): `pump.py` (Pico firmware)
+and `pump_ctl.py` (Pi-side host driver; auto-detects the pump by finding `pump.py` on the Pico's flash).
+In normal operation the pump is driven by the rig's dosing app, not by hand.

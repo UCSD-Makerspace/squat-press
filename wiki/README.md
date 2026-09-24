@@ -18,4 +18,5 @@ markdown fed to a long-context model.
 | Compiled page | Compiled from |
 |---|---|
 | [topology.md](topology.md) — system power, boot & device map | [rig-power-and-boot](sources/rig-power-and-boot.md) |
-| [peristaltic-pump.md](peristaltic-pump.md) — liquid-reward dosing subsystem | [kamoer-modbus-driver](sources/kamoer-modbus-driver.md), [kamoer-pump-tubing](sources/kamoer-pump-tubing.md), [mouse-reward-dosing](sources/mouse-reward-dosing.md) |
+| [peristaltic-pump.md](peristaltic-pump.md) — liquid-reward dosing subsystem (TMC2209) | [mother-controller/pump-subsystem](sources/mother-controller/pump-subsystem.md), [mouse-reward-dosing](sources/mouse-reward-dosing.md), [kamoer-pump-tubing](sources/kamoer-pump-tubing.md) |
+| [mother-controller.md](mother-controller.md) — integrated sensor + separate pump board spec | [mother-controller/](sources/mother-controller/) (7 sources) |

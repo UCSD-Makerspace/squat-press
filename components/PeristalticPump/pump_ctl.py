@@ -8,8 +8,8 @@
 #   STEP=GP3  DIR=GP2  SLEEP=GP4  RESET=GP5  ENABLE=GP9  MS1=GP8  MS2=GP7   (1/8 microstep)
 import serial, time, glob, threading
 
-DEFAULT_DOSE_UL = 10.0          # reward per delivery; keep in step with pump.DOSE_UL on the Pico
-UL_PER_REV = 60.0               # PharMed BPT 1.6 mm ID -- REPLACE with the gravimetric value
+DEFAULT_DOSE_UL = 15.0          # reward per delivery; keep in step with pump.DOSE_UL on the Pico
+UL_PER_REV = 12.60               # PharMed BPT 1.6 mm ID -- REPLACE with the gravimetric value
 DOSE_RPM = 52.0
 
 
